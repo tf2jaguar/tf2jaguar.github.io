@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="h-xu1UdOTBmCN39O6noVcSXifjLMIcE4jFTlux0-jY0">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="code-923DdWBdpI">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.cat.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="简介 SpringSecurity 是一个灵活和强大的身份验证和访问控制的安全框架，它确保基于Spring的应用程序提供身份验证和授权支持。它与Spring MVC有很好地集成，并配备了流行的安全算法实现捆绑在一起。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringSecurity浅析：原理篇">
+<meta property="og:url" content="https://tf2jaguar.github.io/springs-principle.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="简介 SpringSecurity 是一个灵活和强大的身份验证和访问控制的安全框架，它确保基于Spring的应用程序提供身份验证和授权支持。它与Spring MVC有很好地集成，并配备了流行的安全算法实现捆绑在一起。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s2.ax1x.com/2019/10/18/KZGylR.jpg">
+<meta property="og:image" content="https://s2.ax1x.com/2019/10/18/KZtAW4.jpg">
+<meta property="og:image" content="https://s2.ax1x.com/2019/10/18/KZBVNq.png">
+<meta property="article:published_time" content="2019-09-22T10:47:49.000Z">
+<meta property="article:modified_time" content="2022-02-23T12:05:01.864Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="原理">
+<meta property="article:tag" content="框架">
+<meta property="article:tag" content="安全">
+<meta property="article:tag" content="springsecurity">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://s2.ax1x.com/2019/10/18/KZGylR.jpg">
+
+
+<link rel="canonical" href="https://tf2jaguar.github.io/springs-principle.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.github.io/springs-principle.html","path":"springs-principle.html","title":"SpringSecurity浅析：原理篇"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>SpringSecurity浅析：原理篇 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?72cb7088ce5f719919879ca4a9d09101"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">68</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">18</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">82</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%AE%80%E4%BB%8B"><span class="nav-number">1.</span> <span class="nav-text">简介</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Spring-Security-%E6%A8%A1%E5%9D%97"><span class="nav-number">1.1.</span> <span class="nav-text">Spring Security 模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%A4%E8%AF%81%E6%B5%81%E7%A8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">认证流程</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">启动原理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8demo"><span class="nav-number">2.1.</span> <span class="nav-text">启动demo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%A5%E6%89%8B-EnableWebSecurity%E6%B3%A8%E8%A7%A3"><span class="nav-number">2.2.</span> <span class="nav-text">入手 @EnableWebSecurity注解</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%9F%E8%BF%9B-SpringWebMvcImportSelector"><span class="nav-number">2.2.1.</span> <span class="nav-text">跟进 SpringWebMvcImportSelector</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%9F%E8%BF%9B-EnableGlobalAuthentication"><span class="nav-number">2.2.2.</span> <span class="nav-text">跟进 @EnableGlobalAuthentication</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B7%9F%E8%BF%9B-WebSecurityConfiguration"><span class="nav-number">2.2.3.</span> <span class="nav-text">跟进 WebSecurityConfiguration</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#setFilterChainProxySecurityConfigurer%EF%BC%88%EF%BC%89%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.3.1.</span> <span class="nav-text">setFilterChainProxySecurityConfigurer（）方法</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#springSecurityFilterChain%EF%BC%88%EF%BC%89"><span class="nav-number">2.2.3.2.</span> <span class="nav-text">springSecurityFilterChain（）</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WebSecurity%E7%9A%84build-%E6%96%B9%E6%B3%95"><span class="nav-number">2.2.4.</span> <span class="nav-text">WebSecurity的build()方法</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#WebSecurity-%E7%B1%BB%E5%9B%BE"><span class="nav-number">2.2.4.1.</span> <span class="nav-text">WebSecurity 类图</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#build-%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.4.2.</span> <span class="nav-text">build()过程</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Filter%E5%AE%9E%E7%8E%B0%E7%9A%84%E6%B5%81%E7%A8%8B"><span class="nav-number">2.2.5.</span> <span class="nav-text">Filter实现的流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%8F%E7%BB%93"><span class="nav-number">2.2.6.</span> <span class="nav-text">小结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%A5%E6%89%8B-WebSecurityConfigurerAdapter-%E9%80%82%E9%85%8D%E5%99%A8%E7%B1%BB%E3%80%82"><span class="nav-number">2.3.</span> <span class="nav-text">入手 WebSecurityConfigurerAdapter 适配器类。</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">68</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">18</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">82</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://e.xitu.io/" title="http:&#x2F;&#x2F;e.xitu.io&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/springs-principle.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="SpringSecurity浅析：原理篇 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SpringSecurity浅析：原理篇
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-22 18:47:49" itemprop="dateCreated datePublished" datetime="2019-09-22T18:47:49+08:00">2019-09-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/SpringSecurity/" itemprop="url" rel="index"><span itemprop="name">SpringSecurity</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/springs-principle.html" class="post-meta-item leancloud_visitors" data-flag-title="SpringSecurity浅析：原理篇" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<p>SpringSecurity 是一个灵活和强大的身份验证和访问控制的安全框架，它确保基于Spring的应用程序提供身份验证和授权支持。它与Spring MVC有很好地集成，并配备了流行的安全算法实现捆绑在一起。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="Spring-Security-模块"><a href="#Spring-Security-模块" class="headerlink" title="Spring Security 模块"></a>Spring Security 模块</h2><ul>
+<li><strong>核心模块</strong> - spring-security-core.jar：包含核心验证和访问控制类和接口，远程支持的基本配置API，是基本模块。</li>
+<li><strong>远程调用</strong> - spring-security-remoting.jar：提供与 Spring Remoting 集成。</li>
+<li><strong>网页</strong> - spring-security-web.jar：包括网站安全的模块，提供网站认证服务和基于URL访问控制。</li>
+<li><strong>配置</strong> - spring-security-config.jar：包含安全命令空间解析代码，若使用XML进行配置则需要。</li>
+<li><strong>LDAP</strong> - spring-security-ldap.jar：LDAP 验证和配置，若需要LDAP验证和管理LDAP用户实体。</li>
+<li><strong>ACL访问控制表</strong> - spring-security-acl.jar：ACL专门领域对象的实现。</li>
+<li><strong>CAS</strong> - spring-security-cas.jar：CAS客户端继承，若想用CAS的SSO服务器网页验证。</li>
+<li><strong>OpenID</strong> - spring-security-openid.jar：OpenID网页验证支持。</li>
+<li><strong>Test</strong> - spring-security-test.jar：支持Spring Security的测试。</li>
+</ul>
+<h2 id="认证流程"><a href="#认证流程" class="headerlink" title="认证流程"></a>认证流程</h2><ol>
+<li>用户使用用户名和密码登录。</li>
+<li>用户名密码被过滤器（默认为UsernamePasswordAuthenticationFilter）获取到，封装成 Authentication。</li>
+<li>token（Authentication实现类）传递给 AuthenticationManager 进行认证。</li>
+<li>AuthenticationManager 认证成功后返回一个封装了用户权限信息的 Authentication 对象。</li>
+<li>通过调用 SecurityContextHolder.getContext().setAuthentication(…) 将 Authentication 对象赋给当前的 SecurityContext。</li>
+</ol>
+<h1 id="启动原理"><a href="#启动原理" class="headerlink" title="启动原理"></a>启动原理</h1><h2 id="启动demo"><a href="#启动demo" class="headerlink" title="启动demo"></a>启动demo</h2><p>引入相关依赖后，根据Spring Security官方文档给出的例子创建类。</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">@EnableWebSecurity</span><br><span class="line">public class WebSecurityConfig extends WebSecurityConfigurerAdapter &#123;</span><br><span class="line"></span><br><span class="line">    @Autowired</span><br><span class="line">    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception &#123;</span><br><span class="line">        auth</span><br><span class="line">            .inMemoryAuthentication()</span><br><span class="line">                .withUser(&quot;user&quot;).password(&quot;password&quot;).roles(&quot;USER&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>以上我们便将spring security应用到我们的项目中了，上面的例子，在内存中配置了一个用户名为user,密码为password，并且拥有USER角色的用户。想要知道它是怎么运行的，请往下看。</p>
+<p><strong>WebSecurityConfigurer的子类可以扩展spring security的应用,</strong> 而WebSecurityConfigurerAdapter是WebSecurityConfigurer 的一个适配器，必然也是做了很多默认的工作。</p>
+<h2 id="入手-EnableWebSecurity注解"><a href="#入手-EnableWebSecurity注解" class="headerlink" title="入手 @EnableWebSecurity注解"></a>入手 @EnableWebSecurity注解</h2><p>跟进@EnableWebSecurity看下源码：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">@Retention(RetentionPolicy.RUNTIME)</span><br><span class="line">@Target(&#123;ElementType.TYPE&#125;)</span><br><span class="line">@Documented</span><br><span class="line">@Import(&#123;WebSecurityConfiguration.class, SpringWebMvcImportSelector.class, OAuth2ImportSelector.class&#125;)</span><br><span class="line">@EnableGlobalAuthentication</span><br><span class="line">@Configuration</span><br><span class="line">public @interface EnableWebSecurity &#123;</span><br><span class="line">    boolean debug() default false;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><strong>Tips：</strong></p>
+<p>@EnableWebSecurity 配置到拥有注解 @Configuration 的类上，就可以获取到spring security的支持.</p>
+<h3 id="跟进-SpringWebMvcImportSelector"><a href="#跟进-SpringWebMvcImportSelector" class="headerlink" title="跟进 SpringWebMvcImportSelector"></a>跟进 SpringWebMvcImportSelector</h3><p>SpringWebMvcImportSelector 的作用是判断当前的环境是否包含springmvc，因为spring security可以在非spring环境下使用，为了避免DispatcherServlet的重复配置，所以使用了这个注解来区分。</p>
+<h3 id="跟进-EnableGlobalAuthentication"><a href="#跟进-EnableGlobalAuthentication" class="headerlink" title="跟进 @EnableGlobalAuthentication"></a>跟进 @EnableGlobalAuthentication</h3><p>注解的源码如下：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@Import(AuthenticationConfiguration.class)</span><br><span class="line">@Configuration</span><br><span class="line">public @interface EnableGlobalAuthentication &#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看出，这个注解引入了AuthenticationConfiguration配置。而这个类用来配置认证相关，主要任务就是生成全局的身份认证管理者。AuthenticationManager：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">@Configuration</span><br><span class="line">@Import(ObjectPostProcessorConfiguration.class)</span><br><span class="line">public class AuthenticationConfiguration &#123;</span><br><span class="line"></span><br><span class="line">    private AuthenticationManager authenticationManager;</span><br><span class="line"></span><br><span class="line">  	@Bean</span><br><span class="line">	public AuthenticationManagerBuilder authenticationManagerBuilder(</span><br><span class="line">			ObjectPostProcessor&lt;Object&gt; objectPostProcessor) &#123;</span><br><span class="line">		return new AuthenticationManagerBuilder(objectPostProcessor);</span><br><span class="line">	&#125;</span><br><span class="line">  </span><br><span class="line">  	public AuthenticationManager getAuthenticationManager() throws Exception &#123;</span><br><span class="line">    	...</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="跟进-WebSecurityConfiguration"><a href="#跟进-WebSecurityConfiguration" class="headerlink" title="跟进 WebSecurityConfiguration"></a>跟进 WebSecurityConfiguration</h3><p><img data-src="https://s2.ax1x.com/2019/10/18/KZGylR.jpg" alt="KZGylR.jpg"></p>
+<h4 id="setFilterChainProxySecurityConfigurer（）方法"><a href="#setFilterChainProxySecurityConfigurer（）方法" class="headerlink" title="setFilterChainProxySecurityConfigurer（）方法"></a>setFilterChainProxySecurityConfigurer（）方法</h4><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">@Autowired(required = false)</span><br><span class="line">public void setFilterChainProxySecurityConfigurer(</span><br><span class="line">        ObjectPostProcessor&lt;Object&gt; objectPostProcessor,</span><br><span class="line">        //T1 使用@Value获取到配置信息</span><br><span class="line">        @Value(&quot;#&#123;@autowiredWebSecurityConfigurersIgnoreParents.getebSecurityConfigurers()&#125;&quot;) List&lt;SecurityConfigurer&lt;Filter,WebSecurity&gt;&gt; webSecurityConfigurers)</span><br><span class="line">        throws Exception &#123;</span><br><span class="line">  </span><br><span class="line">     //T2 创建一个webSecurity 对象</span><br><span class="line">    webSecurity = objectPostProcessor</span><br><span class="line">            .postProcess(new WebSecurity(objectPostProcessor));</span><br><span class="line">    if (debugEnabled != null) &#123;</span><br><span class="line">        webSecurity.debug(debugEnabled);</span><br><span class="line">    &#125;</span><br><span class="line">            </span><br><span class="line">    //T3对configures进行排序</span><br><span class="line">    Collections.sort(webSecurityConfigurers,AnnotationAwareOrderComparator.INSTANCE);</span><br><span class="line">  </span><br><span class="line">     //T4对Order进行比较是否有相同的，由于前面进行了排序，只要比较后有相同的就可以</span><br><span class="line">    Integer previousOrder = null;</span><br><span class="line">    Object previousConfig = null;</span><br><span class="line">    for (SecurityConfigurer&lt;Filter, WebSecurity&gt; config :webSecurityConfigurers) &#123;</span><br><span class="line">        Integer order =AnnotationAwareOrderComparator.lookupOrder(config);</span><br><span class="line">        if (previousOrder != null &amp;&amp; previousOrder.equals(order)) &#123;</span><br><span class="line">            throw new IllegalStateException(</span><br><span class="line">                    &quot;@Order on WebSecurityConfigurers must beunique. Order of &quot;</span><br><span class="line">                            + order + &quot; was already used on &quot; +previousConfig + &quot;, so it cannot be usedon &quot;</span><br><span class="line">                            + config + &quot; too.&quot;);</span><br><span class="line">        &#125;</span><br><span class="line">        previousOrder = order;</span><br><span class="line">        previousConfig = config;</span><br><span class="line">    &#125;</span><br><span class="line">    for (SecurityConfigurer&lt;Filter, WebSecurity&gt;webSecurityConfigurer : webSecurityConfigurers) &#123;</span><br><span class="line">        //T5将配置信息配置到webSecurity中</span><br><span class="line">        webSecurity.apply(webSecurityConfigurer);</span><br><span class="line">    &#125;</span><br><span class="line">    this.webSecurityConfigurers = webSecurityConfigurers;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ol>
+<li>上述代码中T1标记处，我们看一下autowiredWebSecurityConfigurersIgnoreParents.getWebSecurityConfigurers()的源代码</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">private final ConfigurableListableBeanFactory beanFactory;</span><br><span class="line"></span><br><span class="line">public List&lt;SecurityConfigurer&lt;Filter, WebSecurity&gt;&gt; getWebSecurityConfigurers() &#123;</span><br><span class="line">        List&lt;SecurityConfigurer&lt;Filter, WebSecurity&gt;&gt; webSecurityConfigurers = new ArrayList&lt;SecurityConfigurer&lt;Filter, WebSecurity&gt;&gt;();</span><br><span class="line">        Map&lt;String, WebSecurityConfigurer&gt; beansOfType = beanFactory</span><br><span class="line">                .getBeansOfType(WebSecurityConfigurer.class);</span><br><span class="line">        for (Entry&lt;String, WebSecurityConfigurer&gt; entry : beansOfType.entrySet()) &#123;</span><br><span class="line">            webSecurityConfigurers.add(entry.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">        return webSecurityConfigurers;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>这个beansOfType <strong>就是我们定义的继承自WebSecurityConfigurerAdapter的类，</strong> 通过查看父类的定义，我们知道调用build()方法最后返回的必须是一个Filter对象，可以自行参考顶级父类(或接口)WebSecurityConfigurer和SecurityBuilder</p>
+<h4 id="springSecurityFilterChain（）"><a href="#springSecurityFilterChain（）" class="headerlink" title="springSecurityFilterChain（）"></a>springSecurityFilterChain（）</h4><p>为我们创建了一个名字叫做springSecurityFilterChain的Filter<br>源代码:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">/**</span><br><span class="line"> * Creates the Spring Security Filter Chain</span><br><span class="line"> * @return the &#123;@link Filter&#125; that represents the security filterchain</span><br><span class="line"> * @throws Exception</span><br><span class="line"> */</span><br><span class="line">@Bean(name = AbstractSecurityWebApplicationInitializer.DEFAULT_FILTR_NAME)</span><br><span class="line">public Filter springSecurityFilterChain() throws Exception &#123;</span><br><span class="line">    //T1 查看是否有WebSecurityConfigurer的相关配置</span><br><span class="line">    boolean hasConfigurers = webSecurityConfigurers != null</span><br><span class="line">            &amp;&amp; !webSecurityConfigurers.isEmpty();</span><br><span class="line">    //T2 如果没有，说明我们没有注入继承WebSecurityConfigurerAdapter的对象（没有创建其子类）</span><br><span class="line">    if (!hasConfigurers) &#123;</span><br><span class="line">                    </span><br><span class="line">        //T3 创建默认的配置信息WebSecurityConfigurerAdapter,保证SpringSecurity的</span><br><span class="line">        //最基础的功能，如果我们要有自定义的相关，一定要重配置</span><br><span class="line">        WebSecurityConfigurerAdapter adapter =objectObjectPostProcessor</span><br><span class="line">                .postProcess(new WebSecurityConfigurerAdapter() &#123;</span><br><span class="line">                &#125;);</span><br><span class="line">        //T4 默认配置信息载入webSecurity</span><br><span class="line">        webSecurity.apply(adapter);</span><br><span class="line">    &#125;</span><br><span class="line">    // T5这里build一个Filter</span><br><span class="line">    return webSecurity.build();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>webSecurity对象在此时已经加载完所有的配置。</p>
+<p>webSecurity对象为我们创建一个Filter通过的是build()方法。</p>
+<p><strong>注意：</strong> 建立了一个Filter对象，而这个Filter将会拦截掉我们的请求，对请求进行过滤拦截，从而起到对资源进行认证保护的作用。然后这个Filter并非我们自己平时定义的Filter这么简单,这个过滤器也只是一个代理的过滤器而已，里面还会有过滤器链。</p>
+<h3 id="WebSecurity的build-方法"><a href="#WebSecurity的build-方法" class="headerlink" title="WebSecurity的build()方法"></a>WebSecurity的build()方法</h3><p>WebSecurity继承了AbstractConfiguredSecurityBuilder类，实现了SecurityBuilder接口。</p>
+<blockquote>
+<p>事实上AbstractConfiguredSecurityBuilder类的父类AbstractSecurityBuilder也是实现了SecurityBuilder接口。子类和父类实现同一个接口。事实上是为了子类在反射调用方法getInterfaces()中可以获取到接口，根据这里的情况就是WebSecurity反射调用getInterfaces()可以获取到SecurityBuilder接口。</p>
+</blockquote>
+<h4 id="WebSecurity-类图"><a href="#WebSecurity-类图" class="headerlink" title="WebSecurity 类图"></a>WebSecurity 类图</h4><p><img data-src="https://s2.ax1x.com/2019/10/18/KZtAW4.jpg" alt="KZtAW4.jpg"></p>
+<ul>
+<li><p>SecurityBuilder定义了构建的接口标准</p>
+</li>
+<li><p>AbstractSecurityBuilder实现build方法,用AtomicBoolean的变量building保证多线程情况下，操作的原子性。此处采用的是模板模式。定义了doBuild()抽象方法,用来给子类实现。</p>
+</li>
+<li><p>AbstractConfiguredSecurityBuilder 继承AbstractSecurityBuilder实现doBuild()方法,也采用模板模式，定义了实现的具体的步骤，如UNBUILT，INITIALIZING,CONFIGURING,BUILDING，以及BUILT。</p>
+</li>
+</ul>
+<p>我们看一下WebSecurity的定义</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public final class WebSecurity extends</span><br><span class="line">        AbstractConfiguredSecurityBuilder&lt;Filter, WebSecurity&gt; implements</span><br><span class="line">        SecurityBuilder&lt;Filter&gt;, ApplicationContextAware &#123;</span><br><span class="line">        ...</span><br><span class="line">        ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>从上面的代码可以看出WebSecurity指定泛型的类型为Filter，结合上面接口build()方法我们可以知道，<strong>WebSecurity的build()方法返回的是一个Filter,Spring Securiy 通过这个来创建一个过滤器。</strong></p>
+<h4 id="build-过程"><a href="#build-过程" class="headerlink" title="build()过程"></a>build()过程</h4><ul>
+<li>AbstractSecurityBuilder保证了线程的安全。</li>
+<li>AbstractConfiguredSecurityBuilder保证了构建过程以及构建状态。</li>
+<li>WebSecurity通过performBuild()来实现自身的构建</li>
+</ul>
+<p>AbstractConfiguredSecurityBuilder的构建过程，我们看一下doBuild()方法的定义</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">protected final O doBuild() throws Exception &#123;</span><br><span class="line">    synchronized (configurers) &#123;</span><br><span class="line">        buildState = BuildState.INITIALIZING;</span><br><span class="line">        </span><br><span class="line">        //默认什么都没做，WebSecurity也没有重写</span><br><span class="line">        beforeInit(); </span><br><span class="line">        //T1默认此处调用WebSecurityConfigurerAdapter的init(finalWebSecurity web)方法</span><br><span class="line">        init(); </span><br><span class="line">        </span><br><span class="line">        buildState = BuildState.CONFIGURING;</span><br><span class="line">        </span><br><span class="line">        //默认什么都不做,WebSecurity没有重写</span><br><span class="line">        beforeConfigure(); </span><br><span class="line">        //调用WebSecurityConfigurerAdapter的configure(WbSecurity web)，但是什么都没做</span><br><span class="line">        configure();</span><br><span class="line">        </span><br><span class="line">        buildState = BuildState.BUILDING;</span><br><span class="line">        //T2这里调用WebSecurity的performBuild()方法</span><br><span class="line">        O result = performBuild();</span><br><span class="line">        </span><br><span class="line">        buildState = BuildState.BUILT;</span><br><span class="line">        </span><br><span class="line">        //从WebSecurity的实现，这里返回了一个Filter，完成构建过程</span><br><span class="line">        return result;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>T1 处调用WebSecurityConfigurerAdapter的init(final WebSecurity web)方法，看一下源代码的定义</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">/**</span><br><span class="line"> * @param web</span><br><span class="line"> * @throws Exception</span><br><span class="line"> */</span><br><span class="line">public void init(final WebSecurity web) throws Exception &#123;</span><br><span class="line">    //构建HttpSecurity对象</span><br><span class="line">    final HttpSecurity http = getHttp();</span><br><span class="line">    </span><br><span class="line">    //Ta</span><br><span class="line">    web.addSecurityFilterChainBuilder(http).postBuildAction(new Runnable() &#123;</span><br><span class="line">        public void run() &#123;</span><br><span class="line">            FilterSecurityInterceptor securityInterceptor = http</span><br><span class="line">                    .getSharedObject(FilterSecurityInterceptor.class);</span><br><span class="line">            web.securityInterceptor(securityInterceptor);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>这里构建了HttpSecurity对象，以及有一个共享对象FilterSecurityInterceptor。 </li>
+<li>Ta 处调用了WebSecurity的addSecurityFilterChainBuilder()方法，我们看一下这个方法的源代码<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">public WebSecurity addSecurityFilterChainBuilder(</span><br><span class="line">            SecurityBuilder&lt;? extends SecurityFilterChain&gt; securityFilterChainBuilder) &#123;</span><br><span class="line">    //这个就是securityFilterChainBuilders变量</span><br><span class="line">    this.securityFilterChainBuilders.add(securityFilterChainBuilder);</span><br><span class="line">    return this;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+在构建Filter过程的初始化的时候，我们对securityFilterChainBuilders这个变量进行了赋值，默认情况下securityFilterChainBuilders里面只有一个对象，那就是HttpSecurity。</li>
+</ul>
+<p>T2 根据WebSecurity的属性构建Filter的performBuild()方法</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line">@Override</span><br><span class="line">protected Filter performBuild() throws Exception &#123;</span><br><span class="line">    Assert.state(</span><br><span class="line">            //T1  securityFilterChainBuilders哪里来的?</span><br><span class="line">            !securityFilterChainBuilders.isEmpty(),</span><br><span class="line">            () -&gt; &quot;At least one SecurityBuilder&lt;? extends SecurityFilterChain&gt; needs to be specified. &quot;</span><br><span class="line">                    + &quot;Typically this done by adding a @Configuration that extends WebSecurityConfigurerAdapter. &quot;</span><br><span class="line">                    + &quot;More advanced users can invoke &quot;</span><br><span class="line">                    + WebSecurity.class.getSimpleName()</span><br><span class="line">                    + &quot;.addSecurityFilterChainBuilder directly&quot;);</span><br><span class="line">    //T2 ignoredRequests.size()到底是什么？</span><br><span class="line">    int chainSize = ignoredRequests.size() + securityFilterChainBuilders.size();</span><br><span class="line">    //这个securityFilterChains 的集合里面存放的就是我们所有的过滤器链，根据长度的定义，</span><br><span class="line">    //我们也可以知道分为两种一个是通过 ignoredRequests 来的过滤器链,</span><br><span class="line">    //一个是通过 securityFilterChainBuilders 这个过滤器链构建链来的。</span><br><span class="line">    List&lt;SecurityFilterChain&gt; securityFilterChains = new ArrayList&lt;&gt;(</span><br><span class="line">            chainSize);</span><br><span class="line"></span><br><span class="line">    //如果是 ignoredRequest类型的，那么就添加默认过滤器链(DefaultSecurityFilterChain)</span><br><span class="line">    for (RequestMatcher ignoredRequest : ignoredRequests) &#123;</span><br><span class="line">        securityFilterChains.add(new DefaultSecurityFilterChain(ignoredRequest));</span><br><span class="line">    &#125;</span><br><span class="line">           </span><br><span class="line">    //如果是securityFilterChainBuilder类型的，那么通过securityFilterChainBuilder的build()方法来构建过滤器链</span><br><span class="line">    for (SecurityBuilder&lt;? extends SecurityFilterChain&gt; securityFilterChainBuilder : securityFilterChainBuilders) &#123;</span><br><span class="line">        securityFilterChains.add(securityFilterChainBuilder.build());</span><br><span class="line">    &#125;</span><br><span class="line">           </span><br><span class="line">    //将过滤器链交给一个过滤器链代理对象,而这个代理对象就是返回回去的</span><br><span class="line">    //过滤器。到这里为止，过滤器的过程已经结束</span><br><span class="line">    //T3 什么是FilterChainProxy? </span><br><span class="line">    FilterChainProxy filterChainProxy = new FilterChainProxy(securityFilterChains);</span><br><span class="line">    if (httpFirewall != null) &#123;</span><br><span class="line">        filterChainProxy.setFirewall(httpFirewall);</span><br><span class="line">    &#125;</span><br><span class="line">    filterChainProxy.afterPropertiesSet();</span><br><span class="line"></span><br><span class="line">    Filter result = filterChainProxy;</span><br><span class="line">    if (debugEnabled) &#123;</span><br><span class="line">        logger.warn(&quot;\n\n&quot;</span><br><span class="line">                + &quot;********************************************************************\n&quot;</span><br><span class="line">                + &quot;**********        Security debugging is enabled.       *************\n&quot;</span><br><span class="line">                + &quot;**********    This may include sensitive information.  *************\n&quot;</span><br><span class="line">                + &quot;**********      Do not use in a production system!     *************\n&quot;</span><br><span class="line">                + &quot;********************************************************************\n\n&quot;);</span><br><span class="line">        result = new DebugFilter(filterChainProxy);</span><br><span class="line">    &#125;</span><br><span class="line">    postBuildAction.run();</span><br><span class="line">    return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ol>
+<li><p>WebSecurity的securityFilterChainBuilders属性哪里来的？<br>见上边解释</p>
+</li>
+<li><p>ignoredRequest是什么？<br>ignoredRequests只是WebSecurity的一个属性 </p>
+</li>
+<li><p>ignoredRequests的list中的值从哪里来的呢？<br>我们可以看到里面有一个ignore()方法，通过这个来进行设置的<br>怎么设置呢，那我们得看看WebSecurityConfigurerAdapter这个类了，里面有一个configure方法供我们重写</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">public void configure(WebSecurity web) throws Exception &#123;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">#具体的例子如下</span><br><span class="line">@Override</span><br><span class="line">public void configure(WebSecurity web) throws Exception &#123;</span><br><span class="line">    super.configure(web);</span><br><span class="line">    web.ignoring()</span><br><span class="line">           .mvcMatchers(&quot;/favicon.ico&quot;, &quot;/webjars/**&quot;, &quot;/css/**&quot;);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<blockquote>
+<p>然后值得一提的是这里有多少个mvcMatchers就会创建多少个ignoredRequests的对象，也就会有多少个过滤器链，也是在WebSecurity里面定义的内部类IgnoredRequestConfigurer这个类里面。</p>
+</blockquote>
+</li>
+<li><p>FilterChainProxy到底是什么<br>上面的描述中我们知道， FilterChainProxy是真正返回的Filter，上面代码中 FilterChainProxy的对象创建的源码为：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FilterChainProxy filterChainProxy = new FilterChainProxy(securityFilterChains);</span><br></pre></td></tr></table></figure></li>
+</ol>
+<h3 id="Filter实现的流程"><a href="#Filter实现的流程" class="headerlink" title="Filter实现的流程"></a>Filter实现的流程</h3><p><img data-src="https://s2.ax1x.com/2019/10/18/KZBVNq.png" alt="KZBVNq.png"></p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p><strong>SpringSecurityFilterChain</strong> 是Spring Security认证的入口。集成Spring Boot集成之后，xml配置被java注解配置取代，也就是 <strong>在WebSecurityConfiguration中完成了声明springSecurityFilterChain的作用。</strong> 并且最终交给DelegatingFilterProxy这个代理类，负责拦截请求。</p>
+<p>也就是说：**@EnableWebSecurity完成的工作便是加载了WebSecurityConfiguration，AuthenticationConfiguration这两个核心配置类，也就此将spring security的职责划分为了配置安全信息，配置认证信息两部分。** </p>
+<h2 id="入手-WebSecurityConfigurerAdapter-适配器类。"><a href="#入手-WebSecurityConfigurerAdapter-适配器类。" class="headerlink" title="入手 WebSecurityConfigurerAdapter 适配器类。"></a>入手 WebSecurityConfigurerAdapter 适配器类。</h2><ul>
+<li>HttpSecurity 通过getHttp()获取，后面会详细说到这个类</li>
+<li>UserDetailsService 用户信息获取</li>
+<li>AuthenticationManager 认证管理类</li>
+<li></li>
+</ul>
+<p>SecurityContextHolder<br>SecurityContextHolder 用于存储安全上下文信息（如操作用户是谁、用户是否被认证、用户权限有哪些），它用 ThreadLocal 来保存 SecurityContext，者意味着 Spring Security 在用户登录时自动绑定到当前现场，用户退出时，自动清除当前线程认证信息，SecurityContext 中含有正在访问系统用户的详细信息</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+          <div class="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.github.io/springs-principle.html" title="SpringSecurity浅析：原理篇">https://tf2jaguar.github.io/springs-principle.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/%E5%8E%9F%E7%90%86/" rel="tag"><i class="fa fa-tag"></i> 原理</a>
+              <a href="/tags/%E6%A1%86%E6%9E%B6/" rel="tag"><i class="fa fa-tag"></i> 框架</a>
+              <a href="/tags/%E5%AE%89%E5%85%A8/" rel="tag"><i class="fa fa-tag"></i> 安全</a>
+              <a href="/tags/springsecurity/" rel="tag"><i class="fa fa-tag"></i> springsecurity</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/springs-start.html" rel="prev" title="SpringSecurity简单入门">
+                  <i class="fa fa-chevron-left"></i> SpringSecurity简单入门
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/shiro-principle.html" rel="next" title="Shiro浅析：原理篇">
+                  Shiro浅析：原理篇 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">503k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">7:38</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="/js/busuanzi.pure.mini.2.3.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="/live2dw/lib/L2Dwidget.min.js?094cbace49a39548bed64abff5988b05"></script><script>L2Dwidget.init({"log":true,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>
