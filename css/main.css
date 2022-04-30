@@ -2913,20 +2913,55 @@ mark.search-keyword {
     padding: 10px 12px;
   }
 }
-.post {
-  margin-top: 60px;
-  margin-bottom: 60px;
+body {
+  background: url("/images/bg-2.webp");
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: 50% 50%;
+}
+.post-block {
+  border-radius: 25px !important;
+  background: rgba(255,255,255,0.9) !important;
+}
+.pagination {
+  margin-top: 50px !important;
+  border-radius: 25px !important;
+  background: rgba(255,255,255,0.9) !important;
+}
+.header-inner {
+  border-radius: 25px;
+  background: rgba(255,255,255,0.9);
+}
+.popup {
+  background: rgba(255,255,255,0.9);
+}
+.sidebar-inner {
+  border-radius: 25px;
+  background: rgba(255,255,255,0.9);
+}
+.posts-expand {
+  margin-top: 50px;
   padding: 25px;
-  -webkit-box-shadow: 0 0 14px rgba(202,203,203,0.5);
-  -moz-box-shadow: 0 0 14px rgba(202,203,204,0.5);
+  -webkit-box-shadow: 0 0 14px rgba(199,199,199,0.78);
 }
-.ds-top-threads li a {
-  padding-left: 5px;
-  transition: border-width 0.2s linear 0s, color 0.2s linear 0s;
-  border-bottom: none;
-}
-.ds-top-threads li a:hover {
-  border-left: 8px solid #4d768c;
+.posts-expand .post-title-link::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  bottom: 0;
+  left: 0;
+  background-color: #49b1f5;
+  visibility: hidden;
+  -webkit-transform: scaleX(0);
+  -moz-transform: scaleX(0);
+  -ms-transform: scaleX(0);
+  -o-transform: scaleX(0);
+  transform: scaleX(0);
+  transition-duration: 0.2s;
+  transition-timing-function: ease-in-out;
+  transition-delay: 0s;
 }
 .site-brand-wrapper {
   background: url("/images/header-bk.png");
@@ -2958,14 +2993,24 @@ mark.search-keyword {
   font-family: 'Comic Sans MS', sans-serif;
   color: #fff;
 }
-.footer {
-  background: none;
-  font-size: 16px;
+.post-button {
+  margin-top: 30px;
+  text-align: left;
 }
-.footer-inner {
-  font-family: 'Comic Sans MS', sans-serif;
-  text-align: center;
-  color: #4c618f;
+.post-button .btn {
+  color: #fff;
+  font-size: 15px;
+  background: #686868;
+  border-radius: 16px;
+  line-height: 2;
+  margin: 0 4px 8px 4px;
+  padding: 0 20px;
+}
+.post-button a {
+  border-bottom: 1px solid #666;
+}
+.post-button a:hover {
+  color: #7784ba;
 }
 .site-author-name {
   margin: 48px 0 0;
@@ -2979,12 +3024,6 @@ mark.search-keyword {
 .links-of-author {
   margin-top: 30px;
   margin-bottom: 58px;
-}
-.sidebar-inner {
-  color: #649ab6;
-}
-.sidebar {
-  box-shadow: inset 2px 2px 40px #bdb2b2;
 }
 .sidebar a {
   color: #649ab6;
@@ -3006,50 +3045,20 @@ mark.search-keyword {
 .sidebar-nav li:hover {
   color: #0c0b0b;
 }
-element.style {
-  width: 210px;
+.footer {
+  background: none;
+  font-size: 16px;
 }
-.sidebar-toggle {
-  background: #649ab6;
+.footer-inner {
+  font-family: 'Comic Sans MS', sans-serif;
+  text-align: center;
+  color: #fff;
 }
 .back-to-top {
   background: #649ab6;
 }
-.post {
-  margin-top: 10px;
-  margin-bottom: 2px;
-  padding: 15px;
-}
-.post-toc .nav .active>a {
-  color: #4f7e96;
-}
-.post-toc ol a:hover {
-  color: #7784ba;
-}
-.sidebar-nav .sidebar-nav-active:hover {
-  color: #37596c;
-}
 a {
   border-bottom: none;
-}
-.post-button {
-  margin-top: 30px;
-  text-align: left;
-}
-.post-button .btn {
-  color: #fff;
-  font-size: 15px;
-  background: #686868;
-  border-radius: 16px;
-  line-height: 2;
-  margin: 0 4px 8px 4px;
-  padding: 0 20px;
-}
-.post-button a {
-  border-bottom: 1px solid #666;
-}
-.post-button a:hover {
-  color: #7784ba;
 }
 /* webkit, opera, IE9 */
 ::selection {
@@ -3060,22 +3069,4 @@ a {
 ::-moz-selection {
   background: #00c4b6;
   color: #f7f7f7;
-}
-.posts-expand .post-title-link::before {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background-color: #49b1f5;
-  visibility: hidden;
-  -webkit-transform: scaleX(0);
-  -moz-transform: scaleX(0);
-  -ms-transform: scaleX(0);
-  -o-transform: scaleX(0);
-  transform: scaleX(0);
-  transition-duration: 0.2s;
-  transition-timing-function: ease-in-out;
-  transition-delay: 0s;
 }
