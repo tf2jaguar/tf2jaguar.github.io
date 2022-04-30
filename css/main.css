@@ -11,7 +11,7 @@
   --table-row-odd-bg-color: #f9f9f9;
   --table-row-hover-bg-color: #f5f5f5;
   --menu-item-bg-color: #f5f5f5;
-  --theme-color: #222;
+  --theme-color: #fff;
   --btn-default-bg: #fff;
   --btn-default-color: #555;
   --btn-default-border-color: #555;
@@ -1258,7 +1258,7 @@ pre code {
     display: none;
   }
   .github-corner svg {
-    color: var(--theme-color);
+    color: #f00;
     fill: #fff;
   }
   .github-corner .github-corner:hover .octo-arm {
@@ -2940,28 +2940,13 @@ body {
   border-radius: 25px;
   background: rgba(255,255,255,0.9);
 }
+.github-corner svg {
+  fill: #70b7fd;
+}
 .posts-expand {
   margin-top: 50px;
   padding: 25px;
   -webkit-box-shadow: 0 0 14px rgba(199,199,199,0.78);
-}
-.posts-expand .post-title-link::before {
-  content: "";
-  position: absolute;
-  width: 100%;
-  height: 2px;
-  bottom: 0;
-  left: 0;
-  background-color: #49b1f5;
-  visibility: hidden;
-  -webkit-transform: scaleX(0);
-  -moz-transform: scaleX(0);
-  -ms-transform: scaleX(0);
-  -o-transform: scaleX(0);
-  transform: scaleX(0);
-  transition-duration: 0.2s;
-  transition-timing-function: ease-in-out;
-  transition-delay: 0s;
 }
 .site-brand-wrapper {
   background: url("/images/header-bk.png");
