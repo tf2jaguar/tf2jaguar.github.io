@@ -116,7 +116,7 @@
 
 
 <nav class="site-nav">
-  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">70</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">86</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">81</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">22</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -187,18 +187,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">70</span>
+          <span class="site-state-item-count">81</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-count">22</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">86</span>
+        <span class="site-state-item-count">90</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -274,7 +274,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/ceph-problems.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/java-equal-hashcode.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -292,7 +292,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/ceph-problems.html" class="post-title-link" itemprop="url">Ceph踩坑指南</a>
+          <a href="/java-equal-hashcode.html" class="post-title-link" itemprop="url">==，equals，hashCode区别</a>
         </h2>
 
         <div class="post-meta-container">
@@ -305,7 +305,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2019-08-22 20:51:45" itemprop="dateCreated datePublished" datetime="2019-08-22T20:51:45+08:00">2019-08-22</time>
+      <time title="创建时间：2019-11-08 18:57:14" itemprop="dateCreated datePublished" datetime="2019-11-08T18:57:14+08:00">2019-11-08</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -320,12 +320,753 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" itemprop="url" rel="index"><span itemprop="name">分布式存储</span></a>
+          <a href="/categories/Java%E5%9F%BA%E7%A1%80/" itemprop="url" rel="index"><span itemprop="name">Java基础</span></a>
         </span>
     </span>
 
   
-    <span id="/ceph-problems.html" class="post-meta-item leancloud_visitors" data-flag-title="Ceph踩坑指南" title="阅读次数">
+    <span id="/java-equal-hashcode.html" class="post-meta-item leancloud_visitors" data-flag-title="==，equals，hashCode区别" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>2.1k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>&#x3D;&#x3D;，equals，hashCode经常会用到，如果不知道它的规则，岂不是容易出现隐藏的bug么？</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/java-equal-hashcode.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/java-static.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/java-static.html" class="post-title-link" itemprop="url">static关键字</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-11-08 18:40:59" itemprop="dateCreated datePublished" datetime="2019-11-08T18:40:59+08:00">2019-11-08</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Java%E5%9F%BA%E7%A1%80/" itemprop="url" rel="index"><span itemprop="name">Java基础</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/java-static.html" class="post-meta-item leancloud_visitors" data-flag-title="static关键字" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.6k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>Java中static可以修饰类、变量、方法甚至可以构成静态块，让我们来了解下它们各自的使用以及加载顺序吧。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/java-static.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/java-finalxxx.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/java-finalxxx.html" class="post-title-link" itemprop="url">final、finally、finalize的区别</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-11-07 18:30:44" itemprop="dateCreated datePublished" datetime="2019-11-07T18:30:44+08:00">2019-11-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Java%E5%9F%BA%E7%A1%80/" itemprop="url" rel="index"><span itemprop="name">Java基础</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/java-finalxxx.html" class="post-meta-item leancloud_visitors" data-flag-title="final、finally、finalize的区别" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>final、finally、finalize傻傻分不清楚，今天让你彻底弄清楚</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/java-finalxxx.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/java-auto-box.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/java-auto-box.html" class="post-title-link" itemprop="url">java自动装箱与拆箱</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-11-07 18:26:17" itemprop="dateCreated datePublished" datetime="2019-11-07T18:26:17+08:00">2019-11-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Java%E5%9F%BA%E7%A1%80/" itemprop="url" rel="index"><span itemprop="name">Java基础</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/java-auto-box.html" class="post-meta-item leancloud_visitors" data-flag-title="java自动装箱与拆箱" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>4.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>4 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="什么是自动装箱和拆箱"><a href="#什么是自动装箱和拆箱" class="headerlink" title="什么是自动装箱和拆箱"></a>什么是自动装箱和拆箱</h1><blockquote>
+<p><strong>自动装箱</strong> 就是Java自动将原始类型值转换成对应的对象，比如将<strong>int</strong> 的变量转换成<strong>Integer</strong>对象，这个过程叫做装箱，反之将<strong>Integer</strong>对象转换成<strong>int</strong>类型值，这个过程叫做拆箱。因为这里的装箱和拆箱是自动进行的非人为转换，所以就称作为自动装箱和拆箱。</p>
+</blockquote>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/java-auto-box.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/java-design-principle.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/java-design-principle.html" class="post-title-link" itemprop="url">面向对象六大设计原则</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-11-07 17:55:33" itemprop="dateCreated datePublished" datetime="2019-11-07T17:55:33+08:00">2019-11-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Java%E5%9F%BA%E7%A1%80/" itemprop="url" rel="index"><span itemprop="name">Java基础</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/java-design-principle.html" class="post-meta-item leancloud_visitors" data-flag-title="面向对象六大设计原则" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>面向对象设计（OOD：Object Oriented Design）</p>
+<table>
+<thead>
+<tr>
+<th>缩写</th>
+<th>英文名称</th>
+<th>中文名称</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SRP</td>
+<td>Single Responsibility Principle</td>
+<td>单一职责原则</td>
+</tr>
+<tr>
+<td>OCP</td>
+<td>Open Close Principle</td>
+<td>开闭原则</td>
+</tr>
+<tr>
+<td>LSP</td>
+<td>Liskov Substitution Principle</td>
+<td>里氏替换原则</td>
+</tr>
+<tr>
+<td>LoD</td>
+<td>Law of Demeter （ Least Knowledge Principle）</td>
+<td>迪米特法则（最少知道原则）</td>
+</tr>
+<tr>
+<td>ISP</td>
+<td>Interface Segregation Principle</td>
+<td>接口分离原则</td>
+</tr>
+<tr>
+<td>DIP</td>
+<td>Dependency Inversion Principle</td>
+<td>依赖倒置原则</td>
+</tr>
+</tbody></table>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/java-design-principle.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/springb-start2advanced.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/springb-start2advanced.html" class="post-title-link" itemprop="url">SpringBoot入门到进阶（含源码）</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-10-01 20:25:33" itemprop="dateCreated datePublished" datetime="2019-10-01T20:25:33+08:00">2019-10-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/SpringBoot/" itemprop="url" rel="index"><span itemprop="name">SpringBoot</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/springb-start2advanced.html" class="post-meta-item leancloud_visitors" data-flag-title="SpringBoot入门到进阶（含源码）" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>101k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1:31</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="Spring-Boot-入门"><a href="#Spring-Boot-入门" class="headerlink" title="Spring Boot 入门"></a>Spring Boot 入门</h1><h2 id="1、Spring-Boot-简介"><a href="#1、Spring-Boot-简介" class="headerlink" title="1、Spring Boot 简介"></a>1、Spring Boot 简介</h2><blockquote>
+<p>简化Spring应用开发的一个框架；</p>
+<p>整个Spring技术栈的一个大整合；</p>
+<p>J2EE开发的一站式解决方案；</p>
+</blockquote>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/springb-start2advanced.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/shiro-principle.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/shiro-principle.html" class="post-title-link" itemprop="url">Shiro浅析：原理篇</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-22 19:24:18" itemprop="dateCreated datePublished" datetime="2019-09-22T19:24:18+08:00">2019-09-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Shiro/" itemprop="url" rel="index"><span itemprop="name">Shiro</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/shiro-principle.html" class="post-meta-item leancloud_visitors" data-flag-title="Shiro浅析：原理篇" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -356,10 +1097,12 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h1 id="Ceph踩坑指南"><a href="#Ceph踩坑指南" class="headerlink" title="Ceph踩坑指南"></a>Ceph踩坑指南</h1><p><strong>环境：</strong><br>机器：centos 7.5   ceph  Luminous版本     源：阿里云</p>
+          <h1 id="什么是Shiro"><a href="#什么是Shiro" class="headerlink" title="什么是Shiro"></a>什么是Shiro</h1><blockquote>
+<p>Apache Shiro™是一个功能强大且易于使用的Java安全框架，它执行身份验证，授权，加密和会话管理。使用Shiro易于理解的API，您可以快速轻松地保护任何应用程序-从最小的移动应用程序到最大的Web和企业应用程序。</p>
+</blockquote>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/ceph-problems.html#more" rel="contents">
+              <a class="btn" href="/shiro-principle.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -390,7 +1133,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/storage-distributed.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/springs-principle.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -408,7 +1151,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/storage-distributed.html" class="post-title-link" itemprop="url">分布式存储概览</a>
+          <a href="/springs-principle.html" class="post-title-link" itemprop="url">SpringSecurity浅析：原理篇</a>
         </h2>
 
         <div class="post-meta-container">
@@ -421,7 +1164,241 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2019-08-17 17:35:54" itemprop="dateCreated datePublished" datetime="2019-08-17T17:35:54+08:00">2019-08-17</time>
+      <time title="创建时间：2019-09-22 18:47:49" itemprop="dateCreated datePublished" datetime="2019-09-22T18:47:49+08:00">2019-09-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/SpringSecurity/" itemprop="url" rel="index"><span itemprop="name">SpringSecurity</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/springs-principle.html" class="post-meta-item leancloud_visitors" data-flag-title="SpringSecurity浅析：原理篇" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>11 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><blockquote>
+<p>SpringSecurity 是一个灵活和强大的身份验证和访问控制的安全框架，它确保基于Spring的应用程序提供身份验证和授权支持。它与Spring MVC有很好地集成，并配备了流行的安全算法实现捆绑在一起。</p>
+</blockquote>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/springs-principle.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/springs-start.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/springs-start.html" class="post-title-link" itemprop="url">SpringSecurity简单入门</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-20 19:27:33" itemprop="dateCreated datePublished" datetime="2019-09-20T19:27:33+08:00">2019-09-20</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/SpringSecurity/" itemprop="url" rel="index"><span itemprop="name">SpringSecurity</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/springs-start.html" class="post-meta-item leancloud_visitors" data-flag-title="SpringSecurity简单入门" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>16k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>15 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="SpringSecurity简单入门"><a href="#SpringSecurity简单入门" class="headerlink" title="SpringSecurity简单入门"></a>SpringSecurity简单入门</h1><p>环境：SpringBoot 2.1 + Mybatis + SpringSecurity 5.0</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/springs-start.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/ceph-principle.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/ceph-principle.html" class="post-title-link" itemprop="url">Ceph浅析：结构、工作原理及流程</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-09-12 20:11:45" itemprop="dateCreated datePublished" datetime="2019-09-12T20:11:45+08:00">2019-09-12</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -441,7 +1418,7 @@
     </span>
 
   
-    <span id="/storage-distributed.html" class="post-meta-item leancloud_visitors" data-flag-title="分布式存储概览" title="阅读次数">
+    <span id="/ceph-principle.html" class="post-meta-item leancloud_visitors" data-flag-title="Ceph浅析：结构、工作原理及流程" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -454,14 +1431,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>1.1k</span>
+      <span>12k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
+      <span>11 分钟</span>
     </span>
 </div>
 
@@ -472,940 +1449,12 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h1 id="存储系统对比"><a href="#存储系统对比" class="headerlink" title="存储系统对比"></a>存储系统对比</h1><p>目前比较热门的分布式文件系统有如下几种:<br>Ceph，GlusterFS,Sheepdog,Lustre,Swift,Cinder,TFS,HDFS,MooseFS,FastDFS,MogileFS等</p>
+          <h1 id="Ceph浅析：结构、工作原理及流程"><a href="#Ceph浅析：结构、工作原理及流程" class="headerlink" title="Ceph浅析：结构、工作原理及流程"></a>Ceph浅析：结构、工作原理及流程</h1><blockquote>
+<p>其命名和UCSC（Ceph诞生地）的吉祥物有关，这个吉祥物是“Sammy”，一个香蕉色的蛞蝓，就是头足类中无壳的软体动物。这些有多触角的头足类动物，是对一个分布式文件系统高度并行的形象比喻。</p>
+</blockquote>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/storage-distributed.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/storage-NFS.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/storage-NFS.html" class="post-title-link" itemprop="url">NFS安装使用</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-08-14 17:47:16" itemprop="dateCreated datePublished" datetime="2019-08-14T17:47:16+08:00">2019-08-14</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8/" itemprop="url" rel="index"><span itemprop="name">分布式存储</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/storage-NFS.html" class="post-meta-item leancloud_visitors" data-flag-title="NFS安装使用" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>4.9k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="NFS安装使用"><a href="#NFS安装使用" class="headerlink" title="NFS安装使用"></a>NFS安装使用</h1><p>NFS 是 <em>Network File System</em> 的缩写，即网络文件系统。他最大的功能就是<strong>可以透过网络，让不同的机器、不同的操作系统、可以彼此分享个别的档案(share file)</strong> ，所以，也可以简单的将他看做是一个file server呢！</p>
-<p>这个NFS Server可以让你的PC来将网络远程的NFS主机分享的目录，挂载到本地端的机器当中，所以，在本地端的机器看起来，那个远程主机的目录就好象是自己的partition一般！</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/storage-NFS.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/server-R740-Centos.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/server-R740-Centos.html" class="post-title-link" itemprop="url">R740服务器装Centos7.6步骤图</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-08-04 20:32:49" itemprop="dateCreated datePublished" datetime="2019-08-04T20:32:49+08:00">2019-08-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/server-R740-Centos.html" class="post-meta-item leancloud_visitors" data-flag-title="R740服务器装Centos7.6步骤图" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>973</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="Dell-R740服务器安装-Centos-7-6-步骤"><a href="#Dell-R740服务器安装-Centos-7-6-步骤" class="headerlink" title="Dell R740服务器安装 Centos 7.6 步骤"></a>Dell R740服务器安装 Centos 7.6 步骤</h1><p>其实服务器安装系统和虚拟机安装系统没什么太多的不同，注意我前边的文章《服务器装系统注意事项》中说的内容就好了。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/server-R740-Centos.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/server-UltraISO.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/server-UltraISO.html" class="post-title-link" itemprop="url">UltraISO制作启动盘安装CentOS7</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-08-04 18:03:06" itemprop="dateCreated datePublished" datetime="2019-08-04T18:03:06+08:00">2019-08-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/server-UltraISO.html" class="post-meta-item leancloud_visitors" data-flag-title="UltraISO制作启动盘安装CentOS7" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>1.1k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="UltraISO制作启动盘安装CentOS7"><a href="#UltraISO制作启动盘安装CentOS7" class="headerlink" title="UltraISO制作启动盘安装CentOS7"></a>UltraISO制作启动盘安装CentOS7</h1><p>简单几个步骤即可完成启动盘的制作，非常便利</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/server-UltraISO.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mirror-iso.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/mirror-iso.html" class="post-title-link" itemprop="url">iso镜像国内下载源</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-08-04 17:51:11" itemprop="dateCreated datePublished" datetime="2019-08-04T17:51:11+08:00">2019-08-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BB%A3%E7%A0%81%E5%B7%A5%E5%85%B7/" itemprop="url" rel="index"><span itemprop="name">代码工具</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/mirror-iso.html" class="post-meta-item leancloud_visitors" data-flag-title="iso镜像国内下载源" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>581</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="Linux-iso镜像国内下载地址"><a href="#Linux-iso镜像国内下载地址" class="headerlink" title="Linux iso镜像国内下载地址"></a>Linux iso镜像国内下载地址</h1>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/mirror-iso.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/server-attention.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/server-attention.html" class="post-title-link" itemprop="url">服务器装系统注意点</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-08-04 17:21:29" itemprop="dateCreated datePublished" datetime="2019-08-04T17:21:29+08:00">2019-08-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/server-attention.html" class="post-meta-item leancloud_visitors" data-flag-title="服务器装系统注意点" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>798</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>1 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="服务器装系统注意点"><a href="#服务器装系统注意点" class="headerlink" title="服务器装系统注意点"></a>服务器装系统注意点</h1>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/server-attention.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/net-protocol-tcp.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/net-protocol-tcp.html" class="post-title-link" itemprop="url">TCP三次握手四次挥手简介</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-04-16 19:05:31" itemprop="dateCreated datePublished" datetime="2019-04-16T19:05:31+08:00">2019-04-16</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/" itemprop="url" rel="index"><span itemprop="name">计算机网络</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/net-protocol-tcp.html" class="post-meta-item leancloud_visitors" data-flag-title="TCP三次握手四次挥手简介" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>2.2k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>2 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="TCP三次握手四次挥手简介"><a href="#TCP三次握手四次挥手简介" class="headerlink" title="TCP三次握手四次挥手简介"></a>TCP三次握手四次挥手简介</h1>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/net-protocol-tcp.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/thread-communicate.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/thread-communicate.html" class="post-title-link" itemprop="url">线程间的通信、同步方式与进程间通信方式</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-04-15 17:27:47" itemprop="dateCreated datePublished" datetime="2019-04-15T17:27:47+08:00">2019-04-15</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/thread-communicate.html" class="post-meta-item leancloud_visitors" data-flag-title="线程间的通信、同步方式与进程间通信方式" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>2.3k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>2 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="线程间的通信、同步方式与进程间通信方式"><a href="#线程间的通信、同步方式与进程间通信方式" class="headerlink" title="线程间的通信、同步方式与进程间通信方式"></a>线程间的通信、同步方式与进程间通信方式</h1><p>线程、进程两个名字虽然相似但是其确实层级关系，一个进程可以拥有多个线程，而一个线程只会归属于一个进程。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/thread-communicate.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/web-response.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/web-response.html" class="post-title-link" itemprop="url">web通用返回对象</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2019-04-04 18:26:42" itemprop="dateCreated datePublished" datetime="2019-04-04T18:26:42+08:00">2019-04-04</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E4%BB%A3%E7%A0%81%E5%B7%A5%E5%85%B7/" itemprop="url" rel="index"><span itemprop="name">代码工具</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/web-response.html" class="post-meta-item leancloud_visitors" data-flag-title="web通用返回对象" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>7k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>6 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="web通用返回对象"><a href="#web通用返回对象" class="headerlink" title="web通用返回对象"></a>web通用返回对象</h1><p>项目做前后端分离时，我们会经常提供一些数据给前端，为了规范传出数据的格式，通常会定义一个统一的返回工具类，用以标明响应是否成功，数据是否正常返回等。</p>
-<p>下文使用到了构建者模式设计了一个通用返回类。使用简单方便，返回格式清晰明了。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/web-response.html#more" rel="contents">
+              <a class="btn" href="/ceph-principle.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1429,7 +1478,7 @@
 
 
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/5/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><span class="space">&hellip;</span><a class="page-number" href="/page/5/">5</a><span class="page-number current">6</span><a class="page-number" href="/page/7/">7</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/7/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 </div>
@@ -1453,14 +1502,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">612k</span>
+    <span title="站点总字数">673k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">9:16</span>
+    <span title="站点阅读时长">10:11</span>
   </span>
 </div>
 <div class="busuanzi-count">
