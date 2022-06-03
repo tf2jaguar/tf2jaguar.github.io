@@ -116,7 +116,7 @@
 
 
 <nav class="site-nav">
-  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">81</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">22</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">70</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">86</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
       <li class="menu-item menu-item-search">
         <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
         </a>
@@ -187,18 +187,18 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-count">70</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
           <a href="/categories/">
-        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-count">20</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
           <a href="/tags/">
-        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-count">86</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -274,7 +274,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/design-pattern-singleton.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-lock.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -292,7 +292,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/design-pattern-singleton.html" class="post-title-link" itemprop="url">设计模式之单例模式</a>
+          <a href="/mysql-lock.html" class="post-title-link" itemprop="url">mysql锁</a>
         </h2>
 
         <div class="post-meta-container">
@@ -305,7 +305,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-05-22 20:54:09" itemprop="dateCreated datePublished" datetime="2020-05-22T20:54:09+08:00">2020-05-22</time>
+      <time title="创建时间：2020-01-29 10:25:52" itemprop="dateCreated datePublished" datetime="2020-01-29T10:25:52+08:00">2020-01-29</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -320,12 +320,12 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">设计模式</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/design-pattern-singleton.html" class="post-meta-item leancloud_visitors" data-flag-title="设计模式之单例模式" title="阅读次数">
+    <span id="/mysql-lock.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql锁" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -338,14 +338,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.3k</span>
+      <span>2.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -356,10 +356,11 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>单例模式（Singleton Pattern）是 Java 中最简单的设计模式之一。这种类型的设计模式属于创建型模式，它提供了一种创建对象的最佳方式。</p>
+          <h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><h2 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h2><p>锁是计算机协调多个进程或县城并发访问某一资源的机制。</p>
+<p>在数据库中，除传统的计算资源(如CPU、RAM、I&#x2F;O等)的争用之外，数据也是一种供许多用户共享的资源。如何保证数据并发访问的一致性、有效性是所有数据库必须解决的一个问题，锁冲突也是影响数据并发访问性能的一个重要因素。从这个角度来说，锁对数据库显得尤为重要，也更复杂。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/design-pattern-singleton.html#more" rel="contents">
+              <a class="btn" href="/mysql-lock.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -390,7 +391,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/design-pattern-factory.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-global-log.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -408,7 +409,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/design-pattern-factory.html" class="post-title-link" itemprop="url">设计模式之工厂模式</a>
+          <a href="/mysql-global-log.html" class="post-title-link" itemprop="url">mysql全局日志</a>
         </h2>
 
         <div class="post-meta-container">
@@ -421,7 +422,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-05-19 19:52:34" itemprop="dateCreated datePublished" datetime="2020-05-19T19:52:34+08:00">2020-05-19</time>
+      <time title="创建时间：2020-01-18 17:24:05" itemprop="dateCreated datePublished" datetime="2020-01-18T17:24:05+08:00">2020-01-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -436,12 +437,12 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">设计模式</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/design-pattern-factory.html" class="post-meta-item leancloud_visitors" data-flag-title="设计模式之工厂模式" title="阅读次数">
+    <span id="/mysql-global-log.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql全局日志" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -454,14 +455,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>8.3k</span>
+      <span>287</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>8 分钟</span>
+      <span>1 分钟</span>
     </span>
 </div>
 
@@ -472,10 +473,10 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>简单工厂模式是最简单的模式，有助于引出工厂方法模式，而工厂方法模式在后面的许多模式都有应用，它在模式的讨论里屡见不鲜。了解工厂方法模式是了解所有模式的起点。</p>
+          <p><strong>永远不要再生产环境开启这个功能</strong></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/design-pattern-factory.html#more" rel="contents">
+              <a class="btn" href="/mysql-global-log.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -506,7 +507,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/design-pattern-overview.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-show-profile.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -524,7 +525,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/design-pattern-overview.html" class="post-title-link" itemprop="url">设计模式总览</a>
+          <a href="/mysql-show-profile.html" class="post-title-link" itemprop="url">mysql show profile用法</a>
         </h2>
 
         <div class="post-meta-container">
@@ -537,7 +538,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-05-18 14:48:39" itemprop="dateCreated datePublished" datetime="2020-05-18T14:48:39+08:00">2020-05-18</time>
+      <time title="创建时间：2020-01-18 17:04:35" itemprop="dateCreated datePublished" datetime="2020-01-18T17:04:35+08:00">2020-01-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -552,12 +553,129 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/" itemprop="url" rel="index"><span itemprop="name">设计模式</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/design-pattern-overview.html" class="post-meta-item leancloud_visitors" data-flag-title="设计模式总览" title="阅读次数">
+    <span id="/mysql-show-profile.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql show profile用法" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>645</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>1 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="是什么"><a href="#是什么" class="headerlink" title="是什么"></a>是什么</h1><p>show profile是mysql提供可以用来分析当前会话中语句执行的资源消耗情况。可以用于sql调优的测量。</p>
+<p>默认情况下，参数处于关闭状态，并保存最近15次的运行结果</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/mysql-show-profile.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-bulk.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/mysql-bulk.html" class="post-title-link" itemprop="url">mysql-bulk</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-18 16:24:35" itemprop="dateCreated datePublished" datetime="2020-01-18T16:24:35+08:00">2020-01-18</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-bulk.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql-bulk" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -588,10 +706,11 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <p>23种设计模式分为三类，每类都有各自的特点和应用场景。</p>
+          <p>函数：有返回值<br>存储过程：无返回值</p>
+<p>sql: create table、create index、create function、create view</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/design-pattern-overview.html#more" rel="contents">
+              <a class="btn" href="/mysql-bulk.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -622,7 +741,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/alg-BS-variant.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-slow-query.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -640,7 +759,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/alg-BS-variant.html" class="post-title-link" itemprop="url">二分查找变形</a>
+          <a href="/mysql-slow-query.html" class="post-title-link" itemprop="url">mysql慢查询</a>
         </h2>
 
         <div class="post-meta-container">
@@ -653,7 +772,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-03-18 21:32:11" itemprop="dateCreated datePublished" datetime="2020-03-18T21:32:11+08:00">2020-03-18</time>
+      <time title="创建时间：2020-01-18 14:08:33" itemprop="dateCreated datePublished" datetime="2020-01-18T14:08:33+08:00">2020-01-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -668,12 +787,12 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">数据结构与算法</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/alg-BS-variant.html" class="post-meta-item leancloud_visitors" data-flag-title="二分查找变形" title="阅读次数">
+    <span id="/mysql-slow-query.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql慢查询" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -686,490 +805,7 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>4.8k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>4 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>本文对二分查找以及其变形出的部分题目做了总结，增强对二分查找的理解和运用。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/alg-BS-variant.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/alg-dynamic-program.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/alg-dynamic-program.html" class="post-title-link" itemprop="url">动态规划算法题</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2020-03-13 23:26:20" itemprop="dateCreated datePublished" datetime="2020-03-13T23:26:20+08:00">2020-03-13</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">数据结构与算法</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/alg-dynamic-program.html" class="post-meta-item leancloud_visitors" data-flag-title="动态规划算法题" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>13k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>12 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>本文将常见的动态规划做了整合，根据不同的题目总结其特点，根据各自特点找出通用的解题思路。尚未完全总结完成。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/alg-dynamic-program.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/alg-frequenceCode.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/alg-frequenceCode.html" class="post-title-link" itemprop="url">高频算法题-zs</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2020-03-01 10:53:54" itemprop="dateCreated datePublished" datetime="2020-03-01T10:53:54+08:00">2020-03-01</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">数据结构与算法</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/alg-frequenceCode.html" class="post-meta-item leancloud_visitors" data-flag-title="高频算法题-zs" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>52k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>48 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <p>来源《程序员代码面试指南》左程云著</p>
-<ul>
-<li><a href="#%E6%8E%92%E5%BA%8F%E9%97%AE%E9%A2%98">排序问题</a><ul>
-<li><a href="#%E5%B0%8F%E5%92%8C%E9%97%AE%E9%A2%98">小和问题</a></li>
-<li><a href="#%E9%80%86%E5%BA%8F%E5%AF%B9%E9%97%AE%E9%A2%98">逆序对问题</a></li>
-<li><a href="#%E7%9B%B8%E9%82%BB%E4%B8%A4%E6%95%B0%E7%9A%84%E6%9C%80%E5%A4%A7%E5%B7%AE%E5%80%BC">相邻两数的最大差值</a></li>
-</ul>
-</li>
-<li><a href="#%E6%A0%88%E5%92%8C%E9%98%9F%E5%88%97">栈和队列</a><ul>
-<li><a href="#%E6%95%B0%E7%BB%84%E5%AE%9E%E7%8E%B0%E5%9B%BA%E5%AE%9A%E5%A4%A7%E5%B0%8F%E7%9A%84%E9%98%9F%E5%88%97%E5%92%8C%E6%A0%88">数组实现固定大小的队列和栈</a></li>
-<li><a href="#%E5%AE%9E%E7%8E%B0%E8%BF%94%E5%9B%9E%E6%A0%88%E4%B8%AD%E6%9C%80%E5%B0%8F%E5%85%83%E7%B4%A0">实现返回栈中最小元素</a><ul>
-<li><a href="#%E8%A6%81%E6%B1%82">要求</a></li>
-</ul>
-</li>
-<li><a href="#%E5%A6%82%E4%BD%95%E4%BB%85%E7%94%A8%E9%98%9F%E5%88%97%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0%E6%A0%88%E7%BB%93%E6%9E%84">如何仅用队列结构实现栈结构？</a></li>
-<li><a href="#%E5%A6%82%E4%BD%95%E4%BB%85%E7%94%A8%E6%A0%88%E7%BB%93%E6%9E%84%E5%AE%9E%E7%8E%B0%E9%98%9F%E5%88%97%E7%BB%93%E6%9E%84">如何仅用栈结构实现队列结构？</a></li>
-<li><a href="#%E7%8C%AB%E7%8B%97%E9%98%9F%E5%88%97">猫狗队列</a><ul>
-<li><a href="#%E8%A6%81%E6%B1%82-1">要求</a>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/alg-frequenceCode.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/alg-consistent-hash.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/alg-consistent-hash.html" class="post-title-link" itemprop="url">一致性哈希算法</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2020-02-20 15:16:59" itemprop="dateCreated datePublished" datetime="2020-02-20T15:16:59+08:00">2020-02-20</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">数据结构与算法</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/alg-consistent-hash.html" class="post-meta-item leancloud_visitors" data-flag-title="一致性哈希算法" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>2.8k</span>
-    </span>
-    <span class="post-meta-item" title="阅读时长">
-      <span class="post-meta-item-icon">
-        <i class="far fa-clock"></i>
-      </span>
-      <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>3 分钟</span>
-    </span>
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><p>一致性哈希算法在1997年由麻省理工学院提出的一种分布式哈希（DHT）实现算法，设计目标是为了解决因特网中的热点(Hot spot)问题，初衷和CARP十分类似。一致性哈希修正了CARP使用的简 单哈希算法带来的问题，使得分布式哈希（DHT）可以在P2P环境中真正得到应用。 </p>
-<pre><code>一致性hash算法提出了在动态变化的Cache环境中，
-</code></pre>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/alg-consistent-hash.html#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/alg-lru-coding.html">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Big Jelly">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="被窝思考家">
-      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content="undefined | 被窝思考家">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/alg-lru-coding.html" class="post-title-link" itemprop="url">手写LRU缓存算法</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-
-  
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2020-02-18 14:20:42" itemprop="dateCreated datePublished" datetime="2020-02-18T14:20:42+08:00">2020-02-18</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">更新于</span>
-      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/" itemprop="url" rel="index"><span itemprop="name">数据结构与算法</span></a>
-        </span>
-    </span>
-
-  
-    <span id="/alg-lru-coding.html" class="post-meta-item leancloud_visitors" data-flag-title="手写LRU缓存算法" title="阅读次数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-eye"></i>
-      </span>
-      <span class="post-meta-item-text">阅读次数：</span>
-      <span class="leancloud-visitors-count"></span>
-    </span>
-    <span class="post-meta-break"></span>
-    <span class="post-meta-item" title="本文字数">
-      <span class="post-meta-item-icon">
-        <i class="far fa-file-word"></i>
-      </span>
-      <span class="post-meta-item-text">本文字数：</span>
-      <span>568</span>
+      <span>1.4k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -1187,11 +823,11 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h1 id="概述"><a href="#概述" class="headerlink" title="概述"></a>概述</h1><p>LRU是Least Recently Used的缩写，即最近最少使用，是一种常用的页面置换算法，选择最近最久未使用的页面予以淘汰。</p>
-<p>该算法赋予每个页面一个访问字段，用来记录一个页面自上次被访问以来所经历的时间t，当须淘汰一个页面时，选择现有页面中其t 值最大的，即最近最少使用的页面予以淘汰。</p>
+          <h1 id="慢查询是什么"><a href="#慢查询是什么" class="headerlink" title="慢查询是什么"></a>慢查询是什么</h1><p>Mysql的慢查询日志是Mysql提供的一种日志记录，它用来记录在Mysql中响应时间超过阀值的语句。</p>
+<p>具体指运行时间超过long_query_time值的sql，则会被记录到慢查询日志中。long_query_time默认是10s。</p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/alg-lru-coding.html#more" rel="contents">
+              <a class="btn" href="/mysql-slow-query.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1222,7 +858,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/cache-database-cons.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-query-optimization.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -1240,7 +876,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/cache-database-cons.html" class="post-title-link" itemprop="url">缓存数据库双写不一致问题</a>
+          <a href="/mysql-query-optimization.html" class="post-title-link" itemprop="url">mysql查询优化</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1253,7 +889,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-02-01 20:13:54" itemprop="dateCreated datePublished" datetime="2020-02-01T20:13:54+08:00">2020-02-01</time>
+      <time title="创建时间：2020-01-18 12:55:48" itemprop="dateCreated datePublished" datetime="2020-01-18T12:55:48+08:00">2020-01-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1268,12 +904,12 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Cache/" itemprop="url" rel="index"><span itemprop="name">Cache</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/cache-database-cons.html" class="post-meta-item leancloud_visitors" data-flag-title="缓存数据库双写不一致问题" title="阅读次数">
+    <span id="/mysql-query-optimization.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql查询优化" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -1286,14 +922,14 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>3.3k</span>
+      <span>2.7k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
         <i class="far fa-clock"></i>
       </span>
       <span class="post-meta-item-text">阅读时长 &asymp;</span>
-      <span>3 分钟</span>
+      <span>2 分钟</span>
     </span>
 </div>
 
@@ -1304,13 +940,16 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h1 id="Cache-Aside-Pattern"><a href="#Cache-Aside-Pattern" class="headerlink" title="Cache Aside Pattern"></a>Cache Aside Pattern</h1><ol>
-<li>读的时候，先读缓存，缓存没有的话，那么就读数据库，然后取出数据后放入缓存，同时返回响应。</li>
-<li>更新的时候先删除缓存，然后再更新数据库</li>
+          <h1 id="优化一般性流程"><a href="#优化一般性流程" class="headerlink" title="优化一般性流程"></a>优化一般性流程</h1><ol>
+<li>观察。至少跑一天，看看生产的慢sql</li>
+<li>开启慢查询日志，设置阙值，比如超过5s的就是慢sql，将它竹取出来</li>
+<li>explain + 慢sql分析</li>
+<li>show profile</li>
+<li>运维经理 or DBA，进行数据库服务器的参数调优</li>
 </ol>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/cache-database-cons.html#more" rel="contents">
+              <a class="btn" href="/mysql-query-optimization.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1341,7 +980,7 @@
   
 
   <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/cache-why-use.html">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-index.html">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -1359,7 +998,7 @@
     </span>
       <header class="post-header">
         <h2 class="post-title" itemprop="name headline">
-          <a href="/cache-why-use.html" class="post-title-link" itemprop="url">为什么要使用缓存</a>
+          <a href="/mysql-index.html" class="post-title-link" itemprop="url">mysql索引</a>
         </h2>
 
         <div class="post-meta-container">
@@ -1372,7 +1011,7 @@
       </span>
       <span class="post-meta-item-text">发表于</span>
 
-      <time title="创建时间：2020-02-01 18:13:17" itemprop="dateCreated datePublished" datetime="2020-02-01T18:13:17+08:00">2020-02-01</time>
+      <time title="创建时间：2020-01-18 11:54:59" itemprop="dateCreated datePublished" datetime="2020-01-18T11:54:59+08:00">2020-01-18</time>
     </span>
     <span class="post-meta-item">
       <span class="post-meta-item-icon">
@@ -1387,12 +1026,12 @@
       </span>
       <span class="post-meta-item-text">分类于</span>
         <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/Cache/" itemprop="url" rel="index"><span itemprop="name">Cache</span></a>
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
         </span>
     </span>
 
   
-    <span id="/cache-why-use.html" class="post-meta-item leancloud_visitors" data-flag-title="为什么要使用缓存" title="阅读次数">
+    <span id="/mysql-index.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql索引" title="阅读次数">
       <span class="post-meta-item-icon">
         <i class="far fa-eye"></i>
       </span>
@@ -1405,7 +1044,355 @@
         <i class="far fa-file-word"></i>
       </span>
       <span class="post-meta-item-text">本文字数：</span>
-      <span>561</span>
+      <span>6.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h1 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h1><h2 id="定义"><a href="#定义" class="headerlink" title="定义"></a>定义</h2><p>索引是 <strong>一种特殊的文件</strong> (InnoDB数据表上的索引是表空间的一个组成部分)，它们包含着对数据表里 <strong>所有记录的引用指针。</strong> 更通俗的说，数据库索引好比是一本书前面的目录，能加快数据库的查询速度。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/mysql-index.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-b-tree.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/mysql-b-tree.html" class="post-title-link" itemprop="url">mysql为什么使用B+树</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-11 19:16:21" itemprop="dateCreated datePublished" datetime="2020-01-11T19:16:21+08:00">2020-01-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-b-tree.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql为什么使用B+树" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>探讨一下mysql底层的数据结构，是b+树，还是b树。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/mysql-b-tree.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-handbook.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/mysql-handbook.html" class="post-title-link" itemprop="url">mysql使用手册</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-11 18:53:14" itemprop="dateCreated datePublished" datetime="2020-01-11T18:53:14+08:00">2020-01-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-handbook.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql使用手册" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.5k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <p>手把手叫会零基础的你使用mysql。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/mysql-handbook.html#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/mysql-install.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="undefined | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/mysql-install.html" class="post-title-link" itemprop="url">mysql5.7 安装教程</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2020-01-11 15:53:14" itemprop="dateCreated datePublished" datetime="2020-01-11T15:53:14+08:00">2020-01-11</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-02-23 20:05:01" itemprop="dateModified" datetime="2022-02-23T20:05:01+08:00">2022-02-23</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Mysql/" itemprop="url" rel="index"><span itemprop="name">Mysql</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-install.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql5.7 安装教程" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.2k</span>
     </span>
     <span class="post-meta-item" title="阅读时长">
       <span class="post-meta-item-icon">
@@ -1423,10 +1410,11 @@
     
     
     <div class="post-body" itemprop="articleBody">
-          <h1 id="为什么要用缓存"><a href="#为什么要用缓存" class="headerlink" title="为什么要用缓存"></a>为什么要用缓存</h1><p>结合以下两点说自己的项目。</p>
+          <p>手把手教你安装mysql5.7</p>
+<h1 id="官方最新下载地址"><a href="#官方最新下载地址" class="headerlink" title="官方最新下载地址"></a>官方最新下载地址</h1><p><a target="_blank" rel="noopener" href="https://dev.mysql.com/downloads/mysql/">https://dev.mysql.com/downloads/mysql/</a></p>
           <!--noindex-->
             <div class="post-button">
-              <a class="btn" href="/cache-why-use.html#more" rel="contents">
+              <a class="btn" href="/mysql-install.html#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1450,7 +1438,7 @@
 
 
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/9/">9</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="上一页"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="下一页"></i></a>
   </nav>
 
 </div>
@@ -1474,14 +1462,14 @@
       <i class="fa fa-chart-line"></i>
     </span>
       <span>站点总字数：</span>
-    <span title="站点总字数">673k</span>
+    <span title="站点总字数">612k</span>
   </span>
   <span class="post-meta-item">
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
       <span>站点阅读时长 &asymp;</span>
-    <span title="站点阅读时长">10:11</span>
+    <span title="站点阅读时长">9:16</span>
   </span>
 </div>
 <div class="busuanzi-count">
