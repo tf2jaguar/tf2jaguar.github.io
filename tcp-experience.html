@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.1.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="h-xu1UdOTBmCN39O6noVcSXifjLMIcE4jFTlux0-jY0">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="code-923DdWBdpI">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.github.io","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"livere","storage":true,"lazyload":false,"nav":null,"activeClass":"livere"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="1. 写在前头重新整理了一下TCP相关的面经和高频知识点，它不一定全也可能出现错误，非常希望大家能够补充和勘误！">
+<meta property="og:type" content="article">
+<meta property="og:title" content="TCP面经">
+<meta property="og:url" content="https://tf2jaguar.github.io/tcp-experience.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="1. 写在前头重新整理了一下TCP相关的面经和高频知识点，它不一定全也可能出现错误，非常希望大家能够补充和勘误！">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/c9653430a745419b950db1d338eb8dd0-20220314194338106.png">
+<meta property="og:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/bbcd43a69e7341288d4a3863dafe0b54-20220314194338104.png">
+<meta property="og:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/db213a7ad4ed4b5eb48cf66169434a0b-20220314194338777.png">
+<meta property="og:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/80f00a81c0ee4f9fa2b78b60ccfde86f-20220314194339223.png">
+<meta property="og:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/8b0bf75f7a65436e8a7e6e9ee9013ac4-20220314194340211.png">
+<meta property="article:published_time" content="2022-03-14T11:41:20.000Z">
+<meta property="article:modified_time" content="2022-06-17T12:48:33.960Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="TCP&#x2F;IP">
+<meta property="article:tag" content="网络">
+<meta property="article:tag" content="面经">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.github.io/images/pic/tcp-experience/c9653430a745419b950db1d338eb8dd0-20220314194338106.png">
+
+
+<link rel="canonical" href="https://tf2jaguar.github.io/tcp-experience.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.github.io/tcp-experience.html","path":"tcp-experience.html","title":"TCP面经"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>TCP面经 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?72cb7088ce5f719919879ca4a9d09101"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">81</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">22</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%86%99%E5%9C%A8%E5%89%8D%E5%A4%B4"><span class="nav-number">1.</span> <span class="nav-text">1. 写在前头</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-TCP%E7%9B%B8%E5%85%B3%E9%9D%A2%E7%BB%8F-%E5%92%8C%E9%AB%98%E9%A2%91%E7%9F%A5%E8%AF%86%E7%82%B9"><span class="nav-number">2.</span> <span class="nav-text">2. TCP相关面经]和高频知识点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-TCP%E7%9A%8411%E7%A7%8D%E7%8A%B6%E6%80%81"><span class="nav-number">3.</span> <span class="nav-text">3 TCP的11种状态</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E5%88%9D%E5%A7%8B%E7%8A%B6%E6%80%81"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 初始状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E4%B8%89%E6%AC%A1%E6%8F%A1%E6%89%8B%E7%8A%B6%E6%80%81"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 三次握手状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E5%9B%9B%E6%AC%A1%E6%8C%A5%E6%89%8B%E7%8A%B6%E6%80%81"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 四次挥手状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%9F%E7%90%86"><span class="nav-number">3.4.</span> <span class="nav-text">原理</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">81</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://e.xitu.io/" title="http:&#x2F;&#x2F;e.xitu.io&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.github.io/tcp-experience.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="TCP面经 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          TCP面经
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+
+  
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-14 19:41:20" itemprop="dateCreated datePublished" datetime="2022-03-14T19:41:20+08:00">2022-03-14</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2022-06-17 20:48:33" itemprop="dateModified" datetime="2022-06-17T20:48:33+08:00">2022-06-17</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E8%AE%A1%E7%AE%97%E6%9C%BA%E7%BD%91%E7%BB%9C/" itemprop="url" rel="index"><span itemprop="name">计算机网络</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/tcp-experience.html" class="post-meta-item leancloud_visitors" data-flag-title="TCP面经" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h2 id="1-写在前头"><a href="#1-写在前头" class="headerlink" title="1. 写在前头"></a>1. 写在前头</h2><p>重新整理了一下TCP相关的面经和高频知识点，它不一定全也可能出现错误，非常希望大家能够补充和勘误！</p>
+<span id="more"></span>
+
+<h2 id="2-TCP相关面经-和高频知识点"><a href="#2-TCP相关面经-和高频知识点" class="headerlink" title="2. TCP相关面经]和高频知识点"></a>2. TCP相关面经]和高频知识点</h2><blockquote>
+<p>以下知识点的思路是<code>从TCP概念的四个点逐点深挖</code>，不知道大家读完能不能有所体会：为什么这么写</p>
+</blockquote>
+<ul>
+<li>TCP是<code>可靠的</code>、<code>面向连接的</code>、<code>基于字节流的</code>、<code>全双工的</code>传输层协议</li>
+</ul>
+<ol>
+<li>为什么是<code>可靠的</code>？<br>1 使用<code>检验和</code>来验证传输报文中的错误<br>2 使用定时器来进行<code>超时重传</code><br>3 使用<code>序列号</code>来检测乱序、丢失和冗余，使用确认应答报文使发送方确认收到信息<br>4 TCP使用<code>流量控制</code>和<code>拥塞控制</code>来保证可靠性</li>
+</ol>
+<ul>
+<li><p>什么是<code>流量控制</code>？<br>TCP会把要发送的数据放入<code>发送缓冲区</code>，接收到的数据放入<code>接收缓冲区</code>，流量控制做的就是，<code>根据</code>接收缓冲区的接收能力（剩余可接收数据的空间），<code>调节</code>发送端发送数据的滑动窗口大小，<code>使得发送方的发送速率与接收方的接收速率相匹配</code>，流量控制是<code>基于发送端和接收端的控制机制</code><br>（TCP 在收到数据包回复的 ACK 报文里会带上自己接收窗口的大小，接收端需要根据这个值调整自己的发送策略）</p>
+</li>
+<li><p>如果<code>发送方的滑动窗口变为0了</code>，那么它之后怎么确定它又能向接收端发送数据了呢？<br>TCP设计了<code>零窗口探测的机制</code>，用来向接收端探测接收窗口的大小，在接收端有接收能力的时候就能再次发送数据了</p>
+</li>
+<li><p>什么是<code>零窗口探测机制</code>？<br>零窗口探测机制是发送端会发送一个<code>零窗口探测的包</code>，其实就是一个ACK报文，以此来知悉接收方是否具备接收能力</p>
+</li>
+<li><p>什么是<code>拥塞控制</code>？<br>拥塞控制是<code>基于整个网络的通信情况</code>，在网络中对资源的请求超过资源可用量的情况叫拥塞（吞吐量小于理想吞吐量），TCP的发送方会根据在目的路径之间没什么拥塞而增加发送速率，若有拥塞则降低发送速率。通过超时或连续接收到3个冗余的ACK报文来判断拥塞，发送速率由拥塞窗口来控制。拥塞控制涉及<code>慢启动</code>、<code>拥塞避免</code>、<code>快重传</code>、<code>快恢复</code>四种<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a>，它的本质是<code>控制拥塞窗口的变化</code></p>
+</li>
+<li><p>什么是<code>拥塞窗口</code>？<br>拥塞窗口指的是<code>在收到对端 ACK 之前</code>自己还能传输的<a href="/jump/super-jump/word?word=%E6%9C%80%E5%A4%A7%E6%95%B0">最大数</a>据量大小，这里要与<code>滑动窗口</code>区分开，滑动窗口的大小是根据接收到的对端ACK报文中接收窗口的大小来指定的</p>
+</li>
+<li><p>那么真正的<code>发送窗口大小</code>是取决于滑动窗口的大小还是拥塞窗口的大小？<br>取的是两者间的最小值，如果滑动窗口比拥塞窗口小，表示接收端处理能力不够；如果拥塞窗口小于滑动窗口，表示接收端处理能力 ok，但网络拥塞</p>
+</li>
+<li><p>说说拥塞控制的<code>四个[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>吧<br>发送方维护一个叫做拥塞窗口的状态变量Cwnd，其值取决于网络拥塞程度，动态变化，慢启动<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a>阈值ssthresh，发送窗口大小Swnd<br><code>慢启动[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：发送窗口大小 &#x3D; 拥塞窗口大小（一个较小的值MSS），随着双方通信，收到确认应答报文，拥塞窗口指数级增长，超过慢开始阈值后，使用拥塞避免<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a><br><code>拥塞避免[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：拥塞窗口随着传输轮次增大，当cwnd &gt; ssthresh，拥塞窗口的大小呈线性增长<br><code>快重传[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：在传输过程中有报文丢失，发送方累计连续3次收到重复确认报文，就将相应的报文段立即重传，而不是在该报文段的超时重传计时器超时重传<br><code>快恢复[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：当收到三次重复确认报文后，进入快恢复阶段。拥塞窗口大小 cwnd 设置为 ssthresh，将拥塞阈值 ssthresh 降低为 cwnd 的一半，再进行线性增长</p>
+</li>
+</ul>
+<ol start="2">
+<li>什么是<code>面向连接的</code>？<br>在正式发送请求数据之前需要通过<code>三次握手建立连接</code>，结束通信通过<code>四次挥手断开连接</code></li>
+</ol>
+<ul>
+<li><p>什么是三次握手？<br><code>第一次握手</code>：客户端发送SYN报文，并且会随机选择一个数字作为初始化的序列号，请求建立连接<br><code>第二次握手</code>：服务端收到客户端的SYN报文后，也会发送一个SYN报文，并随机生成初始化序列号，同时还会发送客户端SYN报文对应的ACK确认应答报文给客户端，其中ACK报文中的确认号等于客户端序列号加一<br><code>第三次握手</code>：客户端收到服务端的SYN报文后，还要发送ACK确认应答报文给服务器，其确认号等于服务端序列号加一，三次握手完成，双方建立连接</p>
+</li>
+<li><p>为什么序列号<code>是随机生成的而不是从0开始</code>？<br>出于安全性考虑。如果被知道了连接的序列号，很容易伪造 RST 包，这样就可以将连接强制关闭掉了。如果采用动态增长的 ISN，要想构造一个在对方窗口内的序列号难度就大很多了</p>
+</li>
+<li><p><code>为什么要三次握手才能建立连接</code>？<br>1 防止已经失效的连接请求报文传送到服务器产生脏连接<br>2 为了实现可靠的数据传输，TCP连接双方都需要维护一个序列号，若是两次握手的话，服务端发送的序列号得不到确认（客户端可以接收到序列号，但是没有确认收到的回应发送给服务器）</p>
+</li>
+<li><p>那么能<code>四次握手</code>吗？<br>可以，将服务器的第二次握手拆成两次，一次发送客户端的确认应答ACK报文，另一次发送SYN数据报文，这样就变成了四次握手<br><img data-src="/../images/pic/tcp-experience/c9653430a745419b950db1d338eb8dd0-20220314194338106.png" alt="在这里插入图片描述"></p>
+</li>
+<li><p>什么是四次挥手？<br><code>第一次挥手</code>：客户端向服务器发送一个FIN终止连接报文，从这以后客户端不再发送数据给服务端，但是能接受服务端的数据，客户端进入FIN-WAIT-1状态<br><code>第二次挥手</code>：服务器收到该报文后，发送给客户端一个ACK确认报文，服务端进入CLOSE_WAIT状态，客户端收到 ACK 以后进入FIN-WAIT-2状态<br><code>第三次挥手</code>：服务端在发送完数据，准备释放连接连接时，会向客户端发送FIN终止连接报文，然后进入LAST-ACK状态，等待客户端的ACK确认应答报文<br><code>第四次挥手</code>：客户端收到服务端的FIN报文后，发送ACK确认报文，<code>等待2MSL后</code>，进入CLOSED状态</p>
+</li>
+<li><p><code>为什么是四次挥手</code>？<br>客户端和服务器采用的是全双工通信，发送方和接收方都需要发送FIN终止链接报文和ACK确认应答报文才能断开</p>
+</li>
+<li><p><code>变成三次</code>可以吗？<br>是可以的，可以将第二次挥手和第三次挥手变成一次挥手，同时发送ACK确认应答报文和FIN终止连接报文给客户端，这样就变成了三次挥手<br><img data-src="/../images/pic/tcp-experience/bbcd43a69e7341288d4a3863dafe0b54-20220314194338104.png" alt="在这里插入图片描述"></p>
+</li>
+<li><p>什么是<code>MSL</code>？<br>MSL（报文最大生存时间）是 TCP 报文在网络中的最大生存时间。这个值与 IP 报文头的 TTL（Time to live） 字段有密切的关系，它不是具体的时间，而是IP报文最多可以经过的路由器数量，每经过一个路由器，TTL的值减一，当它为0时报文则被丢弃，<code>指定TTL减为0的时间不能超过MSL秒</code></p>
+</li>
+<li><p>为什么要<code>等待2MSL</code>后才能释放连接？<br>1 等待2MSL可以保证连接的所有报文都会从网络上消失，防止新旧连接的混淆<br>2 确保可靠实现 TCP 全双工终止连接，保证服务端能接收到客户端发送的确认报文（如果该报文丢失，服务端没收收到就会超时重传之前的终止连接报文，若客户端直接进入closed状态，则无法收到该报文，也不会发送确认报文，那么服务器就无法正常进入closed状态）</p>
+</li>
+<li><p>为什么时间是两个MSL？<br>1 个 MSL 确保四次挥手中<code>主动关闭方最后的 ACK 报文最终能达到对端</code>；<br>1 个 MSL 确保<code>对端没有收到 ACK 重传的 FIN 报文可以到达</code>；<br>2MSL &#x3D; 去向 ACK 消息最大存活时间（MSL) + 来向 FIN 消息的最大存活时间（MSL）</p>
+</li>
+</ul>
+<ol start="3">
+<li>什么是<code>基于字节流的</code>？<br>在<code>发送报文之前</code>会将数据写入内核缓冲区，比如写入了800字节，那么这800字节的数据最终会以多少条报文发送出去是不确定的，这取决于路径最大传输单元 （MTU）、发送窗口大小、拥塞窗口大小等原因，<code>流强调的是报文数据没有边界</code>，也就是说它会有很多种情况发送出去，这800字节可能是200字节、200字节、400字节这样发送的</li>
+</ol>
+<ul>
+<li><p>什么是<code>最大传输单元MTU</code>？<br><code>数据链路层</code>传输的帧大小是有限制的，不能把一个太大的包直接塞给链路层，这个限制被称为<code>最大传输单元</code>（Maximum Transmission Unit, MTU）。一个包从发送端传输到接收端，中间要跨越很多网络，而每个网络的MTU可能不太一样，那么在通信过程中的最小MTU被称为<code>路径MTU</code>，是由网络中最小的MTU来决定的，就像是木桶效应</p>
+</li>
+<li><p>知道<code>MSS</code>吗？<br>TCP <code>为了避免被发送方分片</code>，会主动把数据分割成小段再交给网络层，最大的分段大小称之为 MSS（Max Segment Size）</p>
+</li>
+</ul>
+<ol start="4">
+<li>什么是<code>全双工通信</code>？<br>在通信过程中，发送端和接收端既可以是客户端也可以是服务器</li>
+</ol>
+<ul>
+<li>听说过<code>TFO</code>吗？<br>TFO是在TCP协议上的扩展协议，当<code>客户端与服务器已经成功建立过正常的TCP三次握手</code>后，那么再次发送SYN请求建立连接的报文时就同时会传输数据了，它的<code>显著优势</code>是相比常规三次握手<code>节省一个RTT的往返时间</code></li>
+</ul>
+<h2 id="3-TCP的11种状态"><a href="#3-TCP的11种状态" class="headerlink" title="3 TCP的11种状态"></a>3 TCP的11种状态</h2><blockquote>
+<p>我按照如下三类进行了划分，感觉这样相比于把11种状态画在一个表格里更容易理解</p>
+</blockquote>
+<h3 id="3-1-初始状态"><a href="#3-1-初始状态" class="headerlink" title="3.1 初始状态"></a>3.1 初始状态</h3><p><img data-src="/../images/pic/tcp-experience/db213a7ad4ed4b5eb48cf66169434a0b-20220314194338777.png" alt="在这里插入图片描述"></p>
+<h3 id="3-2-三次握手状态"><a href="#3-2-三次握手状态" class="headerlink" title="3.2 三次握手状态"></a>3.2 三次握手状态</h3><p><img data-src="/../images/pic/tcp-experience/80f00a81c0ee4f9fa2b78b60ccfde86f-20220314194339223.png" alt="在这里插入图片描述"></p>
+<h3 id="3-3-四次挥手状态"><a href="#3-3-四次挥手状态" class="headerlink" title="3.3 四次挥手状态"></a>3.3 四次挥手状态</h3><p><img data-src="/../images/pic/tcp-experience/8b0bf75f7a65436e8a7e6e9ee9013ac4-20220314194340211.png" alt="在这里插入图片描述"></p>
+<hr>
+<p><strong>补充和勘误欢迎留言，看到都会修改</strong>## 目标</p>
+<p>去除 iconfinder 上 icon 的水印</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>利用水印像素点和原图像素点颜色合并的原理，如果拥有加过水印的图片和水印图片，就可以反向推出原图原像素点的颜色；前提是你得拥有他的水印图片</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.github.io/tcp-experience.html" title="TCP面经">https://tf2jaguar.github.io/tcp-experience.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/TCP-IP/" rel="tag"><i class="fa fa-tag"></i> TCP/IP</a>
+              <a href="/tags/%E7%BD%91%E7%BB%9C/" rel="tag"><i class="fa fa-tag"></i> 网络</a>
+              <a href="/tags/%E9%9D%A2%E7%BB%8F/" rel="tag"><i class="fa fa-tag"></i> 面经</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/tcp-protocol.html" rel="prev" title="TCP协议灵魂之问">
+                  <i class="fa fa-chevron-left"></i> TCP协议灵魂之问
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/io-epoll-structure.html" rel="next" title="epoll数据结构">
+                  epoll数据结构 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments" id="lv-container" data-id="city" data-uid="MTAyMC81NjI1Ni8zMjcxOQ=="></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">673k</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">10:11</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="/js/busuanzi.pure.mini.2.3.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script src="/js/third-party/comments/livere.js"></script>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

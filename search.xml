@@ -19,6 +19,1586 @@
       </tags>
   </entry>
   <entry>
+    <title>避免递归查询的树数据表设计与实现</title>
+    <url>/mysql-tree-in-table.html</url>
+    <content><![CDATA[<p>通常树形结构的存储，是在子节点上存储父节点的编号来确定各节点的父子关系，例如这样的组织结构：</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410125826989.png" alt="image-20220410125826989" style="zoom:33%;"/>
+
+<span id="more"></span>
+
+<p>与之对应的表数据(department)：</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410133404195.png" alt="image-20220410133404195" style="zoom:33%;" />
+
+<p>部门表结构（department）</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">id          部门编号</span><br><span class="line">name        部门名称</span><br><span class="line">level       所在树层级</span><br><span class="line">parent_id   上级部门编号</span><br></pre></td></tr></table></figure>
+
+<h2 id="问题来了"><a href="#问题来了" class="headerlink" title="问题来了"></a>问题来了</h2><p>这样的方式很不错，可以很直观的体现各个节点之间的关系，通常可以满足大多数需求。但是当业务需求变得多了，数据量庞大了，这样的方式就不再适合用于生产。</p>
+<p>例如：PM加了以下需求：</p>
+<ol>
+<li>查出指定部门下所有子孙部门</li>
+<li>查询子孙部门总数</li>
+<li>判断节点是否叶子节点</li>
+</ol>
+<h3 id="查出所有子孙部门"><a href="#查出所有子孙部门" class="headerlink" title="查出所有子孙部门"></a>查出所有子孙部门</h3><p>使用指定部门编号，一层一层使用递归往下查，可能是多数人会想到的方法。尽管在mysql8.0支持了 cte(公共表表达式)，递归效率比传统递归方式有明显提升，但是查询效率仍会随着部门树层级深度的提高而变差。</p>
+<p>另外一种方法，一次性查出所有数据，放入内存中处理（数据量少时，可以选用。数据量多，不怕挨打的人也可以选这种）~</p>
+<h3 id="查询子孙部门总数"><a href="#查询子孙部门总数" class="headerlink" title="查询子孙部门总数"></a>查询子孙部门总数</h3><p>递归查询每一层的数量，最后相加。</p>
+<h3 id="判断是否叶子节点"><a href="#判断是否叶子节点" class="headerlink" title="判断是否叶子节点"></a>判断是否叶子节点</h3><ul>
+<li>方法1：可以加字段 isLeaf 的方式，来表示这个节点是否是叶子节点。</li>
+<li>方法2：直接通过查询parent_id&#x3D;当前id的count是否大于0，大于0表示不是叶子节点，等于0表示为叶子节点。</li>
+</ul>
+<p>在日常中，可能会经常使用上述类似方法去解决类似的问题，但我觉得这样的方法在效率上不是最优解。于是乎开始查找更好的方案去解决这些问题。</p>
+<h2 id="要不试试这个方法？"><a href="#要不试试这个方法？" class="headerlink" title="要不试试这个方法？"></a>要不试试这个方法？</h2><p>直到后面查到国外一博客中，见到了所谓的《改进后的先序树遍历》文章（天哪，竟然是一篇2003年发表的文章）~</p>
+<p>他具体是怎么做的呢？ 还是回到刚刚的组织架构</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410125826989.png" alt="image-20220410125826989" style="zoom:33%;" />
+
+<p>我们从根节点开始，给董事长左值设为1，下级部门总经理左值设为2，以此类推地沿着边缘开始遍历，给每个节点加上左值，遇到叶子节点处给节点加上右值，再继续向上沿着边缘继续遍历，遍历结束回到根节点右侧,你将得到类似这样的结构。</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410132822574.png" alt="image-20220410132822574" style="zoom:33%;" />
+
+<p>遍历完后每一个节点都有与之对应的左右值。这个时候可以去除parent_id字段，添加lft,rgt，来存储左右值。</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410133436531.png" alt="image-20220410133436531" style="zoom:33%;" />
+
+<p>数据和结构准备完毕，我们来试试操作解决上面的需求~</p>
+<h3 id="查出所有子孙部门-1"><a href="#查出所有子孙部门-1" class="headerlink" title="查出所有子孙部门"></a>查出所有子孙部门</h3><p>根据当前表结构的规律，可以发现，要想查出所有子孙部门，只要查左值在 被查寻部门的左\右数之间的节点，查出来都是他的子节点。例如：查询行政总监的所有子部门，行政总监的左右数是9和18，因此只需要用9和18做lft字段的between查询，查询出的结果就是【被查部门本身数据和所有子孙部门】；</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="variable">@lft</span> :<span class="operator">=</span> <span class="number">9</span>;</span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@rgt</span> :<span class="operator">=</span> <span class="number">18</span>;</span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> department <span class="keyword">WHERE</span> lft <span class="keyword">BETWEEN</span> <span class="variable">@lft</span> <span class="keyword">AND</span> <span class="variable">@rgt</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> lft <span class="keyword">ASC</span>;</span><br><span class="line"><span class="comment">/*例子中用BETWEEN将被查部门本身也查了出来。实际中可以用大于小于*/</span></span><br></pre></td></tr></table></figure>
+
+<p>完美~ </p>
+<h3 id="查询子孙部门总数-1"><a href="#查询子孙部门总数-1" class="headerlink" title="查询子孙部门总数"></a>查询子孙部门总数</h3><p>到这里可能会说，需求1都解决了，查总数自然也就解决了，直接上select count就可以了，确实没有错，但是没有那个必要，因为有个简单公式可以直接计算。</p>
+<ul>
+<li>公式：总数 &#x3D; (右值 - 左值 - 1) &#x2F; 2</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">例如：  </span><br><span class="line">行政总监的子孙部门数 = (18 - 9 - 1) / 2 = 4</span><br><span class="line">董事长的子孙部门数 = (20 - 1 - 1) / 2 = 9</span><br><span class="line">会计的子部门数 =  (14 - 13 - 1) / 2 = 0</span><br><span class="line"></span><br><span class="line">可以数数看，确实没错哦～</span><br></pre></td></tr></table></figure>
+
+<h3 id="判断是否叶子节点-1"><a href="#判断是否叶子节点-1" class="headerlink" title="判断是否叶子节点"></a>判断是否叶子节点</h3><p>通过有了上述计算公式算总数的经验后，现在判断是否叶子节点，有的小伙伴已经知道了怎么做，那就是：  </p>
+<ul>
+<li>右值 - 1 &#x3D;&#x3D; 左值 那他就是叶子节点，</li>
+<li>左值 + 1 &#x3D;&#x3D; 右值 那他就是叶子节点，反之则不是叶子节点。</li>
+</ul>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line">例如：</span><br><span class="line">设计部，5 - 1 == 4，因此他是叶子节点。</span><br><span class="line">董事长，20 - 1 != 1，因此他不是叶子节点。</span><br></pre></td></tr></table></figure>
+
+<p>至此已经完美的解决了上述需求问题，接下来再尝试一下业务的基本操作。   </p>
+<h2 id="其他基本操作"><a href="#其他基本操作" class="headerlink" title="其他基本操作"></a>其他基本操作</h2><h3 id="新增部门"><a href="#新增部门" class="headerlink" title="新增部门"></a>新增部门</h3><p>当新增一个部门时，需要对新增节点位置的后续边缘进行加2操作，因为每一个节点有左右两个数值。这个操作通常需要放到事务中进行处理。例如：在研发部门下添加一个新部门：</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410140616848.png" alt="image-20220410140616848" style="zoom:33%;" />
+
+<p>对应sql：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="variable">@lft</span> :<span class="operator">=</span> <span class="number">7</span>;<span class="comment">/*新部门的左值*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@rgt</span> :<span class="operator">=</span> <span class="number">8</span>;<span class="comment">/*新部门的左值*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@level</span> :<span class="operator">=</span> <span class="number">5</span>;<span class="comment">/*新部门的层级*/</span></span><br><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="comment">/*将插入的后续边缘的节点左右数+2*/</span></span><br><span class="line"><span class="keyword">UPDATE</span> department <span class="keyword">SET</span> lft<span class="operator">=</span>lft<span class="operator">+</span><span class="number">2</span> <span class="keyword">WHERE</span> lft <span class="operator">&gt;</span> <span class="variable">@lft</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> department <span class="keyword">SET</span> rgt<span class="operator">=</span>rgt<span class="operator">+</span><span class="number">2</span> <span class="keyword">WHERE</span> rgt <span class="operator">&gt;=</span> <span class="variable">@lft</span>;</span><br><span class="line"><span class="comment">/*插入数据*/</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> department(name,lft,rgt,level) <span class="keyword">VALUES</span>(<span class="string">&#x27;新部门&#x27;</span>,<span class="variable">@lft</span>,<span class="variable">@rgt</span>,level);</span><br><span class="line"><span class="comment">/*新增影响行数为0时，必须回滚*/</span></span><br><span class="line"><span class="keyword">commit</span>;</span><br><span class="line"><span class="comment">/*rollback;*/</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="删除部门"><a href="#删除部门" class="headerlink" title="删除部门"></a>删除部门</h3><p>删除部门与新增部门类似，不同的是需要对删除节点的后续边缘节点减2操作。例如：删除刚刚添加的新部门：</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410141922098.png" alt="image-20220410141922098" style="zoom:33%;" />
+
+<p>对应sql</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="variable">@lft</span> :<span class="operator">=</span> <span class="number">7</span>;<span class="comment">/*要删除的节点左值*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@rgt</span> :<span class="operator">=</span> <span class="number">8</span>;<span class="comment">/*要删除的节点右值*/</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> department <span class="keyword">SET</span> lft<span class="operator">=</span>lft<span class="number">-2</span> <span class="keyword">WHERE</span> lft <span class="operator">&gt;</span> <span class="variable">@lft</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> department <span class="keyword">SET</span> rgt<span class="operator">=</span>rgt<span class="number">-2</span> <span class="keyword">WHERE</span> rgt <span class="operator">&gt;</span> <span class="variable">@lft</span>;</span><br><span class="line"><span class="comment">/*删除节点*/</span></span><br><span class="line"><span class="keyword">DELETE</span> <span class="keyword">FROM</span> department <span class="keyword">WHERE</span> lft<span class="operator">=</span><span class="variable">@lft</span> <span class="keyword">AND</span> rgt<span class="operator">=</span><span class="variable">@rgt</span>;</span><br><span class="line"><span class="comment">/*删除影响行数为0时，必须回滚*/</span></span><br><span class="line"><span class="keyword">commit</span>;</span><br><span class="line"><span class="comment">/*rollback*/</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="查询直接子部门"><a href="#查询直接子部门" class="headerlink" title="查询直接子部门"></a>查询直接子部门</h3><p>查询某部门的直接子部门（即不包含孙子部门），例如：查询总经理下的直接子部门。正常需要返回产品部和行政总监</p>
+<img data-src="../images/pic/mysql-tree-in-table/image-20220410143559246.png" alt="image-20220410143559246" style="zoom:33%;" />
+
+<p>对应的sql</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="variable">@level</span> :<span class="operator">=</span> <span class="number">2</span>;<span class="comment">/*总经理的level*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@lft</span> :<span class="operator">=</span> <span class="number">2</span>;<span class="comment">/*总经理的左值*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@rgt</span> :<span class="operator">=</span> <span class="number">19</span>;<span class="comment">/*总经理的右值*/</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> department <span class="keyword">WHERE</span> lft <span class="operator">&gt;</span> <span class="variable">@lft</span> <span class="keyword">AND</span> rgt <span class="operator">&lt;</span> <span class="variable">@rgt</span> <span class="keyword">AND</span> level <span class="operator">=</span> <span class="variable">@level</span><span class="operator">+</span><span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="查询祖链路径"><a href="#查询祖链路径" class="headerlink" title="查询祖链路径"></a>查询祖链路径</h3><p>查询某部门的祖链路径。例如：查询产品部的祖链路径，正常需要返回董事长,总经理</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SET</span> <span class="variable">@lft</span> :<span class="operator">=</span> <span class="number">3</span>;<span class="comment">/*产品部左值*/</span></span><br><span class="line"><span class="keyword">SET</span> <span class="variable">@rgt</span> :<span class="operator">=</span> <span class="number">8</span>;<span class="comment">/*产品部右值*/</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> department <span class="keyword">WHERE</span> lft <span class="operator">&lt;</span> <span class="variable">@lft</span> <span class="keyword">AND</span> rgt <span class="operator">&gt;</span> <span class="variable">@rgt</span> <span class="keyword">ORDER</span> <span class="keyword">BY</span> lft <span class="keyword">ASC</span>;</span><br></pre></td></tr></table></figure>
+
+<h3 id="树形数据展示（JS示例）"><a href="#树形数据展示（JS示例）" class="headerlink" title="树形数据展示（JS示例）"></a>树形数据展示（JS示例）</h3><figure class="highlight js"><table><tr><td class="code"><pre><span class="line"><span class="keyword">let</span> list = [<span class="comment">//模拟sql查出来的列表。    &#123;id:1,name:&#x27;root&#x27;,lft:1,rgt:8,level:1&#125;,    &#123;id:2,name:&#x27;child&#x27;,lft:2,rgt:7,level:2&#125;,    &#123;id:3,name:&#x27;grandson&#x27;,lft:3,rgt:4,level:3&#125;,    &#123;id:4,name:&#x27;grandson2&#x27;,lft:5,rgt:6,level:3&#125;];let rights = [] /*类似于一个栈结构（后进先出）*/let mp = &#123;&#125;//list.sort((a,b) =&gt; a.lft - b.lft)//如果你在sql中没有进行排序，需要在这里给他排序。list.forEach(item =&gt; &#123;    if(rights.length &gt; 0) &#123;        while(rights[rights.length-1] &lt; item.rgt) &#123;            rights.splice(-1, 1)//从rights末尾去除        &#125;    &#125;    let _level = rights.length;    item._level = _level;    mp[_level] = item.id    item.parent_id = _level - 1 in mp ? mp[_level - 1] : null;//计算出上级部门编号    item.is_leaf = item.lft === item.rgt - 1;//判断是否叶子部门    rights.push(item.rgt)&#125;)/*上级部门计算出来了，和存parent_id的效果就一样了，后面只需要递归即可*//*递归函数 示例*/let recursive = (_list, parent_id = null) =&gt; &#123;    let _tree = [];    _list.forEach(item =&gt; &#123;        if(item.parent_id == parent_id) &#123;            let childs = recursive(_list, item.id)            _tree.push(&#123;                ...item,                children: childs.length &gt; 0 ? childs : (item.isLeaf ? null : [])            &#125;)        &#125;    &#125;)    return _tree&#125;console.log(recursive(list))</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="完结"><a href="#完结" class="headerlink" title="完结"></a>完结</h2><p>在我目前看来，这个方法的唯一缺点就是，每一次的新增或删除，操作节点的后续边缘走到的节点都要加&#x2F;减2操作。</p>
+]]></content>
+      <categories>
+        <category>Mysql</category>
+      </categories>
+      <tags>
+        <tag>mysql</tag>
+        <tag>SQL优化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>IO模型</title>
+    <url>/io-model.html</url>
+    <content><![CDATA[<h2 id="Unix五种I-x2F-O-模式"><a href="#Unix五种I-x2F-O-模式" class="headerlink" title="Unix五种I&#x2F;O 模式"></a>Unix五种I&#x2F;O 模式</h2><ul>
+<li><p>阻塞 I&#x2F;O           (Linux下的I&#x2F;O操作默认是阻塞I&#x2F;O，即open和socket创建的I&#x2F;O都是阻塞I&#x2F;O)</p>
+</li>
+<li><p>非阻塞 I&#x2F;O        (可以通过fcntl或者open时使用O_NONBLOCK参数，将fd设置为非阻塞的I&#x2F;O)</p>
+</li>
+<li><p>I&#x2F;O 多路复用     (I&#x2F;O多路复用，通常需要非阻塞I&#x2F;O配合使用)</p>
+</li>
+<li><p>信号驱动 I&#x2F;O    (SIGIO)</p>
+</li>
+<li><p>异步 I&#x2F;O   (aio_系列函数)</p>
+</li>
+</ul>
+<span id="more"></span>
+
+<h3 id="五种IO模型都包含两个阶段"><a href="#五种IO模型都包含两个阶段" class="headerlink" title="五种IO模型都包含两个阶段"></a>五种IO模型都包含两个阶段</h3><ol>
+<li>等待数据准备好（等待数据从网络中到达，数据到达后，被复制到内核的缓冲区中） </li>
+<li>从内核缓冲区向用户缓冲区复制数据</li>
+</ol>
+<p>分别介绍不同的IO模型，并且使用UDP作为例子，因为UDP整个数据报要么已经收到，要么没有。</p>
+<h3 id="阻塞IO"><a href="#阻塞IO" class="headerlink" title="阻塞IO"></a>阻塞IO</h3><p>进程处于阻塞模式时，让出CPU，进入休眠状态</p>
+<p>一个进程调用 recvfrom  ，然后系统调用并不返回，直到有数据报到达本地系统且被复制到应用进程的缓冲区或者发生错误才返回。 （如果系统调用收到一个中断信号，则它的调用会被中断）</p>
+<p>我们称这个进程在调用recvfrom一直到从recvfrom返回这段时间是阻塞的。当recvfrom正常返回时，我们的进程继续它的操作。</p>
+<img data-src="../images/pic/io-model/image-20220328114048747.png" alt="image-20220328114048747" style="zoom:35%;" />
+
+<h3 id="非阻塞IO"><a href="#非阻塞IO" class="headerlink" title="非阻塞IO"></a>非阻塞IO</h3><p>等待数据的阶段是非阻塞的，也就是当没有数据报准备好，recvfrom立即返回一个错误，但是当数据包准备好了，recvfrom将数据报从内核缓冲区复制到应用进程缓冲区后返回。</p>
+<img data-src="../images/pic/io-model/image-20220328114024327.png" alt="image-20220328114024327" style="zoom:35%;" />
+
+<h3 id="I-x2F-O多路复用"><a href="#I-x2F-O多路复用" class="headerlink" title="I&#x2F;O多路复用"></a>I&#x2F;O多路复用</h3><p>io复用模型是阻塞在select&#x2F;poll或epoll函数(2.6内核开始支持)系统调用之上的，而没有阻塞在真正的I&#x2F;O系统调用如recvfrom之上。它等待数据报套接字变为可读，当数据报可读时，调用recvfrom把数据报复制到应用进程缓冲区中。</p>
+<blockquote>
+<p>当我们调用 select函数阻塞的时候，select 函数等待数据报套接字进入读就绪状态。当select函数返回的时候， 也就是套接字可以读取数据的时候。 这时候我们就可以调用 recvfrom函数来将数据拷贝到我们的程序缓冲区中。</p>
+</blockquote>
+<p>对于单个I&#x2F;O操作，和阻塞模式相比较，select()和poll()或epoll并没有什么高级的地方。而且，</p>
+<ul>
+<li><p>阻塞模式下只需要调用一个函数：读取或发送函数。</p>
+</li>
+<li><p>使用了多路复用技术后，我们需要调用两个函数了：先调用 select()函数或poll()函数，然后才能进行真正的读写。</p>
+</li>
+</ul>
+<p>多路复用的高级之处在于:</p>
+<p>它能同时等待多个文件描述符，而这些文件描述符（套接字描述符）其中的任意一个进入读就绪状态，select()函数就可以返回</p>
+<img data-src="../images/pic/io-model/image-20220328145143103.png" alt="image-20220328145143103" style="zoom:35%;" />
+
+<p>IO 多路技术一般在下面这些情况中被使用：</p>
+<ol>
+<li>当一个客户端需要同时处理多个文件描述符的输入输出操作的时候（一般来说是标准的输入输出和网络套接字)，I&#x2F;O 多路复用技术将会有机会得到使用。</li>
+<li>当程序需要同时进行多个套接字的操作的时候。</li>
+<li>如果一个 TCP 服务器程序同时处理正在侦听网络连接的套接字和已经连接好的套接字。</li>
+<li>如果一个服务器程序同时使用 TCP 和 UDP 协议。</li>
+<li>如果一个服务器同时使用多种服务并且每种服务可能使用不同的协议（比如 inetd就是这样的）。</li>
+</ol>
+<h3 id="信号驱动式IO"><a href="#信号驱动式IO" class="headerlink" title="信号驱动式IO"></a>信号驱动式IO</h3><p>通过sigaction系统调用安装一个信号处理函数，系统调用立即返回，当数据报准备好读取时，内核产生一个信号，随后就可以在信号处理函数中调用recvfrom读取数据报，将数据从内核空间复制到用户空间</p>
+<img data-src="../images/pic/io-model/image-20220328151154801.png" alt="image-20220328151154801" style="zoom:35%;" />
+
+<h3 id="异步IO"><a href="#异步IO" class="headerlink" title="异步IO"></a>异步IO</h3><p>调用aio_系列函数，给内核传递描述符、缓冲区指针、缓冲区大小和文件偏移，该系统调用立即返回，当整个IO操作完成，即数据报到达，并且从内核缓冲区被复制到用户缓冲区后，才产生一个信号。</p>
+<img data-src="../images/pic/io-model/image-20220328151828059.png" alt="image-20220328151828059" style="zoom:35%;" />
+
+<p>当我们运行在异步 I&#x2F;O 模式下时，我们如果想进行 I&#x2F;O 操作，只需要告诉内核我们要进行 I&#x2F;O 操作，然后内核会马上返回。具体的 I&#x2F;O 和数据的拷贝全部由内核来完成，我们的程序可以继续向下执行。当内核完成所有的 I&#x2F;O 操作和数据拷贝后，内核将通知我们的程序。</p>
+<p>异步 I&#x2F;O 和  信号驱动I&#x2F;O的区别是：</p>
+<ol>
+<li>信号驱动 I&#x2F;O 模式下，内核在操作可以被操作的时候通知给我们的应用程序发送SIGIO 消息。</li>
+<li>异步 I&#x2F;O 模式下，内核在所有的操作都已经被内核操作结束之后才会通知我们的应用程序</li>
+</ol>
+<h2 id="IO模型比较"><a href="#IO模型比较" class="headerlink" title="IO模型比较"></a>IO模型比较</h2><p>对比几种模型，可以看出，前4种模型区别主要在第一阶段，它们的第二阶段是一样的：在数据从内核复制到调用者缓冲区期间，进程是阻塞于recvfrom调用，而异步IO，这两个阶段都要处理完毕。</p>
+<h3 id="同步IO-x2F-异步IO"><a href="#同步IO-x2F-异步IO" class="headerlink" title="同步IO&#x2F;异步IO"></a>同步IO&#x2F;异步IO</h3><ul>
+<li>同步IO操作：导致请求进程阻塞，直到IO操作完成。 </li>
+<li>异步IO操作：不导致进程阻塞。</li>
+</ul>
+<img data-src="../images/pic/io-model/image-20220328155200097.png" alt="image-20220328155200097" style="zoom:35%;" />
+
+<p>  所以前4种都是同步IO模型，因为发生了阻塞。</p>
+<h3 id="阻塞-x2F-非阻塞"><a href="#阻塞-x2F-非阻塞" class="headerlink" title="阻塞&#x2F;非阻塞"></a>阻塞&#x2F;非阻塞</h3><p>在处理（网络） IO 的时候，阻塞和非阻塞都是同步IO，阻塞与非阻塞的区分在于网络IO时进行IO操作的线程会不会挂起。</p>
+<p>其实对于某些IO模型来说，阻塞非阻塞其实比较难定义，比如select模型中指用户线程不会阻塞于recvfrom等网络IO操作上，但在select操作本身上是阻塞的，不过因为网络IO并未阻塞的原因仍称selec模型为非阻塞的模型。</p>
+]]></content>
+      <categories>
+        <category>IO</category>
+      </categories>
+      <tags>
+        <tag>IO</tag>
+        <tag>操作系统</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis基础数据结构</title>
+    <url>/redis-structure.html</url>
+    <content><![CDATA[<h2 id="Redis-内部数据结构"><a href="#Redis-内部数据结构" class="headerlink" title="Redis 内部数据结构"></a>Redis 内部数据结构</h2><h3 id="RdeisDb"><a href="#RdeisDb" class="headerlink" title="RdeisDb"></a>RdeisDb</h3><img data-src="../images/pic/redis-structure/CgoB5l28Bx6AUzW7AACuWHuW1yQ159.png" style="zoom: 40%;" >
+
+<span id="more"></span>
+
+<p>Redis 中所有数据都保存在 DB 中，一个 Redis 默认最多支持 16 个 DB。Redis 中的每个 DB 都对应一个 redisDb 结构，即每个 Redis 实例，默认有 16 个 redisDb。用户访问时，默认使用的是 0 号 DB，可以通过 select $dbID 在不同 DB 之间切换。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28Bx6Adu3BAABepkFcPWs950.png" style="zoom:33%;" >
+
+<p>redisDb 主要包括 2 个核心 dict 字典、3 个非核心 dict 字典、dbID 和其他辅助属性。2 个核心 dict 包括一个 dict 主字典和一个 expires 过期字典。主 dict 字典用来存储当前 DB 中的所有数据，它将 key 和各种数据类型的 value 关联起来，该 dict 也称 key space。过期字典用来存储过期时间 key，存的是 key 与过期时间的映射。日常的数据存储和访问基本都会访问到 redisDb 中的这两个 dict。</p>
+<p>3 个非核心 dict 包括一个字段名叫 blocking_keys 的阻塞 dict，一个字段名叫 ready_keys 的解除阻塞 dict，还有一个是字段名叫 watched_keys 的 watch 监控 dict。</p>
+<p>在执行 Redis 中 list 的阻塞命令 blpop、brpop 或者 brpoplpush 时，如果对应的 list 列表为空，Redis 就会将对应的 client 设为阻塞状态，同时将该 client 添加到 DB 中 blocking_keys 这个阻塞 dict。所以该 dict 存储的是处于阻塞状态的 key 及 client 列表。</p>
+<p>当有其他调用方在向某个 key 对应的 list 中增加元素时，Redis 会检测是否有 client 阻塞在这个 key 上，即检查 blocking_keys 中是否包含这个 key，如果有则会将这个 key 加入 read_keys 这个 dict 中。同时也会将这个 key 保存到 server 中的一个名叫 read_keys 的列表中。这样可以高效、不重复的插入及轮询。</p>
+<p>当 client 使用 watch 指令来监控 key 时，这个 key 和 client 就会被保存到 watched_keys 这个 dict 中。redisDb 中可以保存所有的数据类型，而 Redis 中所有数据类型都是存放在一个叫 redisObject 的结构中。</p>
+<h3 id="redisObject"><a href="#redisObject" class="headerlink" title="redisObject"></a>redisObject</h3><img data-src="../images/pic/redis-structure/CgoB5l28Bx6AVwGxAAEKF2oxItk727.png" style="zoom:40%;" >
+
+<p> &amp;nbsp; &amp;nbsp; &amp;nbsp; </p>
+<p>redisObject 由 5 个字段组成。</p>
+<ul>
+<li><p>type：即 Redis 对象的数据类型，目前支持 7 种 type 类型，分别为 </p>
+<ul>
+<li><p>OBJ_STRING</p>
+</li>
+<li><p>OBJ_LIST</p>
+</li>
+<li><p>OBJ_SET</p>
+</li>
+<li><p>OBJ_ZSET</p>
+</li>
+<li><p>OBJ_HASH</p>
+</li>
+<li><p>OBJ_MODULE </p>
+</li>
+<li><p>OBJ_STREAM</p>
+</li>
+</ul>
+</li>
+<li><p>encoding：Redis 对象的内部编码方式，即内部数据结构类型，目前支持 10 种编码方式包括 </p>
+<ul>
+<li><p>OBJ_ENCODING_RAW</p>
+</li>
+<li><p>OBJ_ENCODING_INT</p>
+</li>
+<li><p>OBJ_ENCODING_HT</p>
+</li>
+<li><p>OBJ_ENCODING_ZIPLIST 等。</p>
+</li>
+</ul>
+</li>
+<li><p>LRU：存储的是淘汰数据用的 LRU 时间或 LFU 频率及时间的数据。</p>
+</li>
+<li><p>refcount：记录 Redis 对象的引用计数，用来表示对象被共享的次数，共享使用时加 1，不再使用时减 1，当计数为 0 时表明该对象没有被使用，就会被释放，回收内存。</p>
+</li>
+<li><p>ptr：它指向对象的内部数据结构。比如一个代表 string 的对象，它的 ptr 可能指向一个 sds 或者一个 long 型整数。</p>
+</li>
+</ul>
+<h3 id="dict"><a href="#dict" class="headerlink" title="dict"></a>dict</h3><p>前面讲到，Redis 中的数据实际是存在 DB 中的 2 个核心 dict 字典中的。实际上 dict 也是 Redis 的一种使用广泛的内部数据结构。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28Bx6ALgQTAADi0ZMSOiA596.png" style="zoom:40%;" >
+
+<p>Redis 中的 dict，类似于 Memcached 中 hashtable。都可以用于 key 或元素的快速插入、更新和定位。dict 字典中，有一个长度为 2 的哈希表数组，日常访问用 0 号哈希表，如果 0 号哈希表元素过多，则分配一个 2 倍 0 号哈希表大小的空间给 1 号哈希表，然后进行逐步迁移，rehashidx 这个字段就是专门用来做标志迁移位置的。在哈希表操作中，采用单向链表来解决 hash 冲突问题。dict 中还有一个重要字段是 type，它用于保存 hash 函数及 key&#x2F;value 赋值、比较函数。</p>
+<p>dictht 中的 table 是一个 hash 表数组，每个桶指向一个 dictEntry 结构。dictht 采用 dictEntry 的单向链表来解决 hash 冲突问题。</p>
+<img data-src="../images/pic/redis-structure/CgoB5l28Bx-ADosGAACskc5wrBU688.png" style="zoom:40%;" >
+
+<p>dictht 是以 dictEntry 来存 key-value 映射的。其中 key 是 sds 字符串，value 为存储各种数据类型的 redisObject 结构。</p>
+<p>dict 可以被 redisDb 用来存储数据 key-value 及命令操作的辅助信息。还可以用来作为一些 Redis 数据类型的内部数据结构。dict 可以作为 set 集合的内部数据结构。在哈希的元素数超过 512 个，或者哈希中 value 大于 64 字节，dict 还被用作为哈希类型的内部数据结构。</p>
+<h3 id="sds"><a href="#sds" class="headerlink" title="sds"></a>sds</h3><p>字符串是 Redis 中最常见的数据类型，其底层实现是简单动态字符串即 sds。简单动态字符串本质是一个 char*，内部通过 sdshdr 进行管理。sdshdr 有 4 个字段。len 为字符串实际长度，alloc 当前字节数组总共分配的内存大小。flags 记录当前字节数组的属性；buf 是存储字符串真正的值及末尾一个 \0。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28Bx-AEW-LAABgCctayIw793.png" style="zoom:50%;" >
+
+<p>sds 的存储 buf 可以动态扩展或收缩，字符串长度不用遍历，可直接获得，修改和访问都很方便。由于 sds 中字符串存在 buf 数组中，长度由 len 定义，而不像传统字符串遇 0 停止，所以 sds 是二进制安全的，可以存放任何二进制的数据。</p>
+<img data-src="../images/pic/redis-structure/CgoB5l28Bx-ARu4ZAACk1VRWcR4166.png" style="zoom:50%;" >
+
+<p>简单动态字符串 sds 的获取字符串长度很方便，通过 len 可以直接得到，而传统字符串需要对字符串进行遍历，时间复杂度为 O(n)。</p>
+<p>sds 相比传统字符串多了一个 sdshdr，对于大量很短的字符串，这个 sdshdr 还是一个不小的开销。在 3.2 版本后，sds 会根据字符串实际的长度，选择不同的数据结构，以更好的提升内存效率。当前 sdshdr 结构分为 5 种子类型，分别为 sdshdr5、sdshdr8、sdshdr16、sdshdr32、sdshdr64。其中 sdshdr5 只有 flags 和 buf 字段，其他几种类型的 len 和 alloc 采用从 uint8_t 到 uint64_t 的不同类型，以节省内存空间。</p>
+<p>sds 可以作为字符串的内部数据结构，同时 sds 也是 hyperloglog、bitmap 类型的内部数据结构。</p>
+<h3 id="ziplist"><a href="#ziplist" class="headerlink" title="ziplist"></a>ziplist</h3><p>为了节约内存，并减少内存碎片，Redis 设计了 ziplist 压缩列表内部数据结构。压缩列表是一块连续的内存空间，可以连续存储多个元素，没有冗余空间，是一种连续内存数据块组成的顺序型内存结构。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28Bx-ACG0jAAB7HSDeUSg826.png" style="zoom:50%;" >
+
+<p>ziplist 的结构如图所示，主要包括 5 个部分。</p>
+<ol>
+<li>zlbytes 是压缩列表所占用的总内存字节数。</li>
+<li>Zltail&amp;nbsp;尾节点到起始位置的字节数。</li>
+<li>Zllen&amp;nbsp;总共包含的节点&#x2F;内存块数。</li>
+<li>Entry 是 ziplist 保存的各个数据节点，这些数据点长度随意。</li>
+<li>Zlend 是一个魔数 255，用来标记压缩列表的结束。</li>
+</ol>
+<p>如图所示，一个包含 4 个元素的 ziplist，总占用字节是 100bytes，该 ziplist 的起始元素的指针是 p，zltail 是 80，则第 4 个元素的指针是 P+80。</p>
+<img data-src="../images/pic/redis-structure/CgoB5l28Bx-AY9k6AACHwHJEeWc739.png" style="zoom:50%;" >
+
+<p>压缩列表 ziplist 的存储节点 entry 的结构如图，主要有 6 个字段。</p>
+<ul>
+<li>prevRawLen 是前置节点的长度；</li>
+<li>preRawLenSize 编码 preRawLen 需要的字节数；</li>
+<li>len 当前节点的长度；</li>
+<li>lensize 编码 len 所需要的字节数；</li>
+<li>encoding&amp;nbsp; 当前节点所用的编码类型；</li>
+<li>entryData 当前节点数据。</li>
+</ul>
+<img data-src="../images/pic/redis-structure/CgotOV28Bx-AHq20AABn2LByDio271.png" style="zoom:50%;" >
+
+<p>由于 ziplist 是连续紧凑存储，没有冗余空间，所以插入新的元素需要 realloc 扩展内存，所以如果 ziplist 占用空间太大，realloc 重新分配内存和拷贝的开销就会很大，所以 ziplist 不适合存储过多元素，也不适合存储过大的字符串。</p>
+<p>因此只有在元素数和 value 数都不大的时候，ziplist 才作为 hash 和 zset 的内部数据结构。其中 hash 使用 ziplist 作为内部数据结构的限制时，元素数默认不超过 512 个，value 值默认不超过 64 字节。可以通过修改配置来调整 hash_max_ziplist_entries 、hash_max_ziplist_value 这两个阀值的大小。</p>
+<p>zset 有序集合，使用 ziplist 作为内部数据结构的限制元素数默认不超过 128 个，value 值默认不超过 64 字节。可以通过修改配置来调整 zset_max_ziplist_entries 和 zset_max_ziplist_value&amp;nbsp;这两个阀值的大小。</p>
+<h3 id="quicklist"><a href="#quicklist" class="headerlink" title="quicklist"></a>quicklist</h3><p>Redis 在 3.2 版本之后引入 quicklist，用以替换 linkedlist。因为 linkedlist 每个节点有前后指针，要占用 16 字节，而且每个节点独立分配内存，很容易加剧内存的碎片化。而 ziplist 由于紧凑型存储，增加元素需要 realloc，删除元素需要内存拷贝，天然不适合元素太多、value 太大的存储。</p>
+<img data-src="../images/pic/redis-structure/CgoB5l28ByCADkuqAACua3XXug4030.png" style="zoom:40%;" >
+
+<p>而 quicklist 快速列表应运而生，它是一个基于 ziplist 的双向链表。将数据分段存储到 ziplist，然后将这些 ziplist 用双向指针连接。快速列表的结构如图所示。</p>
+<ul>
+<li>head、tail 是两个指向第一个和最后一个 ziplist 节点的指针。</li>
+<li>count 是 quicklist 中所有的元素个数。</li>
+<li>len 是 ziplist 节点的个数。</li>
+<li>compress 是 LZF 算法的压缩深度。</li>
+</ul>
+<p>快速列表中，管理 ziplist 的是 quicklistNode 结构。quicklistNode 主要包含一个 prev&#x2F;next 双向指针，以及一个 ziplist 节点。单个 ziplist 节点可以存放多个元素。</p>
+<p>快速列表从头尾读写数据很快，时间复杂度为 O(1)。也支持从中间任意位置插入或读写元素，但速度较慢，时间复杂度为 O(n)。快速列表当前主要作为 list 列表的内部数据结构。</p>
+<h3 id="zskiplist"><a href="#zskiplist" class="headerlink" title="zskiplist"></a>zskiplist</h3><p>跳跃表 zskiplist 是一种有序数据结构，它通过在每个节点维持多个指向其他节点的指针，从而可以加速访问。跳跃表支持平均 O(logN) 和最差 O(n) 复杂度的节点查找。在大部分场景，跳跃表的效率和平衡树接近，但跳跃表的实现比平衡树要简单，所以不少程序都用跳跃表来替换平衡树。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28ByCAWS7-AADDdAI6Jok848.png" style="zoom:50%;" >
+
+<p>如果 sorted set 类型的元素数比较多或者元素比较大，Redis 就会选择跳跃表来作为 sorted set有序集合的内部数据结构。</p>
+<p>跳跃表主要由 zskipList 和节点 zskiplistNode 构成。zskiplist 结构如图，header 指向跳跃表的表头节点。tail 指向跳跃表的表尾节点。length 表示跳跃表的长度，它是跳跃表中不包含表头节点的节点数量。level 是目前跳跃表内，除表头节点外的所有节点中，层数最大的那个节点的层数。</p>
+<p>跳跃表的节点 zskiplistNode 的结构如图所示。ele 是节点对应的 sds 值，在 zset 有序集合中就是集合中的 field 元素。score 是节点的分数，通过 score，跳跃表中的节点自小到大依次排列。backward 是指向当前节点的前一个节点的指针。level 是节点中的层，每个节点一般有多个层。每个 level 层都带有两个属性，一个是 forwad 前进指针，它用于指向表尾方向的节点；另外一个是 span 跨度，它是指 forward 指向的节点到当前节点的距离。</p>
+<img data-src="../images/pic/redis-structure/CgoB5l28ByCASkZeAADPgl0yXtk817.png" style="zoom:50%;" >
+
+<p>如图所示是一个跳跃表，它有 3 个节点。对应的元素值分别是 S1、S2 和 S3，分数值依次为 1.0、3.0 和 5.0。其中 S3 节点的 level 最大是 5，跳跃表的 level 是 5。header 指向表头节点，tail 指向表尾节点。在查到元素时，累加路径上的跨度即得到元素位置。在跳跃表中，元素必须是唯一的，但 score 可以相同。相同 score 的不同元素，按照字典序进行排序。</p>
+<p>在 sorted set 数据类型中，如果元素数较多或元素长度较大，则使用跳跃表作为内部数据结构。默认元素数超过 128 或者最大元素的长度超过 64，此时有序集合就采用 zskiplist 进行存储。由于 geo 也采用有序集合类型来存储地理位置名称和位置 hash 值，所以在超过相同阀值后，也采用跳跃表进行存储。</p>
+<img data-src="../images/pic/redis-structure/CgotOV28ByCAIhL8AAEZ-o72tpY715.png" style="zoom:50%;" >
+
+<p>Redis 主要的内部数据结构讲完了，接下来整体看一下，之前讲的 8 种数据类型，具体都是采用哪种内部数据结构来存储的。</p>
+<p>首先，对于 string 字符串，Redis 主要采用 sds 来进行存储。而对于 list 列表，Redis 采用 quicklist 进行存储。对于 set 集合类型，Redis 采用 dict 来进行存储。对于 sorted set 有序集合类型，如果元素数小于 128 且元素长度小于 64，则使用 ziplist 存储，否则使用 zskiplist 存储。对于哈希类型，如果元素数小于 512，并且元素长度小于 64，则用 ziplist 存储，否则使用 dict 字典存储。对于 hyperloglog，采用 sds 简单动态字符串存储。对于 geo，如果位置数小于 128，则使用 ziplist 存储，否则使用 zskiplist 存储。最后对于 bitmap，采用 sds 简单动态字符串存储。</p>
+<p>除了这些主要的内部数据结构，还有在特殊场景下也会采用一些其他内部结构存储，比如，如果操作的字符串都是整数，同时指令是 incr、decr 等，会对字符串采用 long 型整数存储，这些场景比较特殊，限于时间关系，这里不做进一步阐述。</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><img data-src="../images/pic/redis-structure/redis基础数据结构.png" alt="redis基础数据结构" style="zoom:90%;" />]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>数据结构</tag>
+        <tag>redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>海量问题解决方案</title>
+    <url>/big-data-issue.html</url>
+    <content><![CDATA[<h2 id="1-如何从大量的-URL-中找出相同的-URL？"><a href="#1-如何从大量的-URL-中找出相同的-URL？" class="headerlink" title="1. 如何从大量的 URL 中找出相同的 URL？"></a>1. 如何从大量的 URL 中找出相同的 URL？</h2><p>给定 a、b 两个文件，各存放 50 亿个 URL，每个 URL 各占 64B，内存限制是 4G。请找出 a、b 两个文件共同的 URL。</p>
+<p>提醒：每个URL占64B，那么50亿个URL占用的空间大小约为320GB。</p>
+<span id="more"></span>
+
+<ol>
+<li>分治策略</li>
+</ol>
+<p>解答思路：遍历a和b文件，对每个url求hash然后求余数(hash(url)%1000)，这个余数就是小文件编号，比如对a文件按照上述步骤分为1000个小文件，每个文件大约300M。</p>
+<p>接着遍历a的每个小文件，没遍历到一个小文件把url存入set集合中，然后遍历b的每个小文件，看看是否存在set集合中，存在就添加到另一个文件中。</p>
+<ol>
+<li>前缀树</li>
+</ol>
+<p>一般而言，URL 的长度差距不会不大，而且前面几个字符，绝大部分相同。这种情况下，非常适合使用字典树（trie tree） 这种数据结构来进行存储，降低存储成本的同时，提高查询效率。</p>
+<h2 id="2-如何从大量数据中找出高频词？"><a href="#2-如何从大量数据中找出高频词？" class="headerlink" title="2. 如何从大量数据中找出高频词？"></a>2. 如何从大量数据中找出高频词？</h2><p>有一个 1GB 大小的文件，文件里每一行是一个词，每个词的大小不超过 16B，内存大小限制是 1MB，要求返回频数最高的 100 个词(Top 100)。</p>
+<p>解答思路：分割文件同上。分割完成后遍历每个小文件用map统计每个单词出现的次数，然后建立大小为100的小顶堆，之后每次遍历次数的时候，如果遍历到的词的出现次数大于堆顶词的出现次数，则用新词替换堆顶的词，然后重新调整为小顶堆，遍历结束后，小顶堆上的词就是出现频数最高的 100 个词。</p>
+<h2 id="3-如何统计不同电话号码的个数？"><a href="#3-如何统计不同电话号码的个数？" class="headerlink" title="3. 如何统计不同电话号码的个数？"></a>3. 如何统计不同电话号码的个数？</h2><p>已知某个文件内包含一些电话号码，每个号码为 8 位数字，统计不同号码的个数。</p>
+<p>解答思路：对于本题，8 位电话号码可以表示的号码个数为 108 个，即 1 亿个。我们每个号码用一个 bit 来表示，则总共需要 1 亿个 bit，内存占用约 100M。</p>
+<p>很明显我们用redis的bitmap来统计就行了，因为统计的是不同个数而不是求出具体不同的电话号码。用redis创建一个bitmap对象，长度为 1 亿，初始化为 0。然后遍历所有电话号码，把号码对应的位图中的位置置为 1。遍历完成后，如果 bit 为 1，则表示这个电话号码在文件中存在，否则不存在。bit 值为 1 的数量即为 不同电话号码的个数。</p>
+<h2 id="4-如何找出排名前-500-的数？"><a href="#4-如何找出排名前-500-的数？" class="headerlink" title="4. 如何找出排名前 500 的数？"></a>4. 如何找出排名前 500 的数？</h2><p>有 20 个数组，每个数组有 500 个元素，并且有序排列。如何在这 20*500 个数中找出前 500 的数？</p>
+<p>解答思路：对于 TopK 问题，最常用的方法是使用堆排序。对本题而言，假设数组降序排列，可以采用以下方法：</p>
+<p>首先建立大顶堆，堆的大小为数组的个数，即为 20，把每个数组最大的值存到堆中。</p>
+<p>接着删除堆顶元素，保存到另一个大小为 500 的数组中，然后向大顶堆插入删除的元素所在数组的下一个元素。</p>
+<p>重复上面的步骤，直到删除完第 500 个元素，也即找出了最大的前 500 个数。</p>
+<h2 id="5-如何在大量的数据中判断一个数是否存在？"><a href="#5-如何在大量的数据中判断一个数是否存在？" class="headerlink" title="5. 如何在大量的数据中判断一个数是否存在？"></a>5. 如何在大量的数据中判断一个数是否存在？</h2><p>给定 40 亿个不重复的没排过序的 unsigned int 型整数，然后再给定一个数，如何快速判断这个数是否在这 40 亿个整数当中？</p>
+<p>解答思路：直接bitmap 由于 unsigned int 数字的范围是 [0, 1 &lt;&lt; 32)，我们用 1&lt;&lt;32&#x3D;4,294,967,296 个 bit 来表示每个数字。初始位均为 0，那么总共需要内存：4,294,967,296b≈512M。</p>
+<p>我们读取这 40 亿个整数，将对应的 bit 设置为 1。接着读取要查询的数，查看相应位是否为 1，如果为 1 表示存在，如果为 0 表示不存在。</p>
+<h2 id="6-如何按照-query-的频度排序？"><a href="#6-如何按照-query-的频度排序？" class="headerlink" title="6. 如何按照 query 的频度排序？"></a>6. 如何按照 query 的频度排序？</h2><p>有 10 个文件，每个文件大小为 1G，每个文件的每一行存放的都是用户的 query，每个文件的 query 都可能重复。要求按照 query 的频度排序。</p>
+<p>解答思路：第一种方案就是如果 query 重复率高，说明不同 query 总数比较小，可以考虑把所有的 query 都加载到内存中的 map 中。接着就可以按照 query 出现的次数进行排序。第二种方案就是可以顺序遍历 10 个文件中的 query，通过 Hash 函数 hash(query) % 10 把这些 query 划分到 10 个小文件中。之后对每个小文件使用 map 统计 query 出现次数，根据次数排序并写入到零外一个单独文件中，即每个单独文件是按照词频排好序的，接着对所有文件按照 query 的次数进行排序，这里可以使用归并排序（由于无法把所有 query 都读入内存，因此需要使用外排序）。</p>
+<h2 id="7-如何找出某一天访问百度网站最多的-IP？"><a href="#7-如何找出某一天访问百度网站最多的-IP？" class="headerlink" title="7. 如何找出某一天访问百度网站最多的 IP？"></a>7. 如何找出某一天访问百度网站最多的 IP？</h2><p>现有海量日志数据保存在一个超大文件中，该文件无法直接读入内存，要求从中提取某天访问百度次数最多的那个 IP。</p>
+<p>解答思路：这道题只关心某一天访问百度最多的 IP，因此，可以首先对文件进行一次遍历，把这一天访问百度 IP 的相关信息记录到一个单独的大文件中。接下来采用的方法与上一题一样，大致就是先对 IP 进行哈希映射，接着使用 HashMap 统计重复 IP 的次数，最后计算出重复次数最多的 IP。</p>
+<p>注：这里只需要找出出现次数最多的 IP，可以不必使用堆，直接用一个变量 max 即可，max最大的那个ip即为答案。</p>
+<h2 id="8-如何查询最热门的查询串？"><a href="#8-如何查询最热门的查询串？" class="headerlink" title="8. 如何查询最热门的查询串？"></a>8. 如何查询最热门的查询串？</h2><p>搜索引擎会通过日志文件把用户每次检索使用的所有查询串都记录下来，每个查询串的长度不超过 255 字节。</p>
+<p>假设目前有 1000w 个记录（这些查询串的重复度比较高，虽然总数是 1000w，但如果除去重复后，则不超过 300w 个）。请统计最热门的 10 个查询串，要求使用的内存不能超过 1G。（一个查询串的重复度越高，说明查询它的用户越多，也就越热门。）</p>
+<p>解答思路：当这些字符串有大量相同前缀时，可以考虑使用前缀树来统计字符串出现的次数，树的结点保存字符串出现次数，0 表示没有出现。</p>
+<p>在遍历字符串时，在前缀树中查找，如果找到，则把结点中保存的字符串次数加 1，否则为这个字符串构建新结点，构建完成后把叶子结点中字符串的出现次数置为 1。</p>
+<p>最后依然使用小顶堆来对字符串的出现次数进行排序。</p>
+]]></content>
+      <categories>
+        <category>大数据</category>
+      </categories>
+      <tags>
+        <tag>算法</tag>
+        <tag>大数据</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>mysql部分特性</title>
+    <url>/mysql-speciality.html</url>
+    <content><![CDATA[<h2 id="Mvcc和Redolog和Undolog以及Binlog有什么不同"><a href="#Mvcc和Redolog和Undolog以及Binlog有什么不同" class="headerlink" title="Mvcc和Redolog和Undolog以及Binlog有什么不同"></a>Mvcc和Redolog和Undolog以及Binlog有什么不同</h2><h3 id="1-MVCC"><a href="#1-MVCC" class="headerlink" title="1. MVCC"></a>1. MVCC</h3><p>MVCC多版本并发控制是MySQL中基于乐观锁理论实现隔离级别的方式，用于读已提交和可重复读取隔离级别的实现。在MySQL中，会在表中每一条数据后面添加两个字段,最近修改该行数据的事务ID，指向该行（undolog表中）回滚段的指针。</p>
+<span id="more"></span>
+
+<p>Read View判断行的可见性，创建一个新事务时，copy一份当前系统中的活跃事务列表。意思是，当前不应该被本事务看到的其他事务id列表。</p>
+<h3 id="2-UndoLog"><a href="#2-UndoLog" class="headerlink" title="2. UndoLog"></a>2. UndoLog</h3><p>UndoLog也就是我们常说的回滚日志文件 主要用于事务中执行失败，进行回滚，以及MVCC中对于数据历史版本的查看。由引擎层的InnoDB引擎实现,是逻辑日志,记录数据修改被修改前的值,比如”把id&#x3D;’B’ 修改为id &#x3D; ‘B2’ ，那么undo日志就会用来存放id &#x3D;’B’的记录”。</p>
+<p>当一条数据需要更新前,会先把修改前的记录存储在undolog中,如果这个修改出现异常,,则会使用undo日志来实现回滚操作,保证事务的一致性。当事务提交之后，undo log并不能立马被删除,而是会被放到待清理链表中,待判断没有事物用到该版本的信息时才可以清理相应undolog。它保存了事务发生之前的数据的一个版本，用于回滚，同时可以提供多版本并发控制下的读(MVCC)也即非锁定读。</p>
+<h3 id="3-Redolog"><a href="#3-Redolog" class="headerlink" title="3. Redolog"></a>3. Redolog</h3><p>Redolog是重做日志文件是记录数据修改之后的值，用于持久化到磁盘中。</p>
+<p>Redolog包括两部分：</p>
+<ol>
+<li><p>是内存中的日志缓冲(redo log buffer)，该部分日志是易失性的；</p>
+</li>
+<li><p>是磁盘上的重做日志文件(redo log file)，该部分日志是持久的。</p>
+</li>
+</ol>
+<p>由引擎层的InnoDB引擎实现,是物理日志,记录的是物理数据页修改的信息,比如“某个数据页上内容发生了哪些改动”。当一条数据需要更新时,InnoDB会先将数据更新，然后记录redoLog 在内存中，然后找个时间将redoLog的操作执行到磁盘上的文件上。不管是否提交成功我都记录，你要是回滚了，那我连回滚的修改也记录。它确保了事务的持久性。</p>
+<h3 id="4-Binlog"><a href="#4-Binlog" class="headerlink" title="4. Binlog"></a>4. Binlog</h3><p>Binlog由Mysql的Server层实现,是逻辑日志,记录的是sql语句的原始逻辑，比如”把id&#x3D;’B’ 修改为id &#x3D; ‘B2’。</p>
+<p>Binlog会写入指定大小的物理文件中,是追加写入的,当前文件写满则会创建新的文件写入。</p>
+<p>产生:事务提交的时候,一次性将事务中的sql语句,按照一定的格式记录到binlog中。</p>
+<p>用于复制和恢复在主从复制中，从库利用主库上的binlog进行重播(执行日志中记录的修改逻辑),实现主从同步。业务数据不一致或者错了，用binlog恢复。</p>
+<h2 id="Mysql读写分离以及主从同步"><a href="#Mysql读写分离以及主从同步" class="headerlink" title="Mysql读写分离以及主从同步"></a>Mysql读写分离以及主从同步</h2><h3 id="1-原理"><a href="#1-原理" class="headerlink" title="1. 原理"></a>1. 原理</h3><p>主库将变更写binlog日志，然后从库连接到主库后，从库有一个IO线程，将主库的binlog日志拷贝到自己本地，写入一个中继日志中，接着从库中有一个sql线程会从中继日志读取binlog，然后执行binlog日志中的内容，也就是在自己本地再执行一遍sql，这样就可以保证自己跟主库的数据一致。</p>
+<h3 id="2-问题"><a href="#2-问题" class="headerlink" title="2. 问题"></a>2. 问题</h3><p>这里有很重要一点，就是从库同步主库数据的过程是串行化的，也就是说主库上并行操作，在从库上会串行化执行，由于从库从主库拷贝日志以及串行化执行sql特点，在高并发情况下，从库数据一定比主库慢一点，是有延时的，所以经常出现，刚写入主库的数据可能读不到了，要过几十毫秒，甚至几百毫秒才能读取到。还有一个问题，如果突然主库宕机了，然后恰巧数据还没有同步到从库，那么有些数据可能在从库上是没有的，有些数据可能就丢失了。所以mysql实际上有两个机制，一个是半同步复制，用来解决主库数据丢失问题，一个是并行复制，用来解决主从同步延时问题。</p>
+<h3 id="3-半同步复制"><a href="#3-半同步复制" class="headerlink" title="3. 半同步复制"></a>3. 半同步复制</h3><p>semi-sync复制，指的就是主库写入binlog日志后，就会将强制此时立即将数据同步到从库，从库将日志写入自己本地的relay log之后，接着会返回一个ack给主库，主库接收到至少一个从库ack之后才会认为写完成。</p>
+<h3 id="4-并发复制"><a href="#4-并发复制" class="headerlink" title="4. 并发复制"></a>4. 并发复制</h3><p>指的是从库开启多个线程，并行读取relay log中不同库的日志，然后并行重放不同库的日志，这样库级别的并行。（将主库分库也可缓解延迟问题）</p>
+<h2 id="InnoDB的关键特性"><a href="#InnoDB的关键特性" class="headerlink" title="InnoDB的关键特性"></a>InnoDB的关键特性</h2><h3 id="1-插入缓冲"><a href="#1-插入缓冲" class="headerlink" title="1. 插入缓冲"></a>1. 插入缓冲</h3><p>对于非聚集索引的插入或更新操作，不是每一次直接插入到索引页中，而是先判断插入的非聚集索引页是否在缓冲池中，若在，则直接插入；若不在，则先放入到一个Insert Buffer对象中。然后再以一定的频率和情况进行Insert Buffer和辅助索引页子节点的merge（合并）操作，这时通常能将多个插入合并到一个操作中（因为在一个索引页中），这就大大提高了对于非聚集索引插入的性能。</p>
+<h3 id="2-两次写"><a href="#2-两次写" class="headerlink" title="2. 两次写"></a>2. 两次写</h3><p>两次写带给InnoDB存储引擎的是数据页的可靠性，有经验的DBA也许会想，如果发生写失效，可以通过重做日志进行恢复。这是一个办法。但是必须清楚地认识到，如果这个页本身已经发生了损坏（物理到page页的物理日志成功页内逻辑日志失败），再对其进行重做是没有意义的。这就是说，在应用（apply）重做日志前，用户需要一个页的副本，当写入失效发生时，先通过页的副本来还原该页，再进行重做。在对缓冲池的脏页进行刷新时，并不直接写磁盘，而是会通过memcpy函数将脏页先复制到内存中的doublewrite buffer，之后通过doublewrite buffer再分两次，每次1MB顺序地写入共享表空间的物理磁盘上，这就是doublewrite。</p>
+<h3 id="3-自适应哈希索引"><a href="#3-自适应哈希索引" class="headerlink" title="3. 自适应哈希索引"></a>3. 自适应哈希索引</h3><p>InnoDB存储引擎会监控对表上各索引页的查询。如果观察到建立哈希索引可以带来速度提升，则建立哈希索引，称之为自适应哈希索引。</p>
+<h3 id="4-异步IO"><a href="#4-异步IO" class="headerlink" title="4. 异步IO"></a>4. 异步IO</h3><p>为了提高磁盘操作性能，当前的数据库系统都采用异步IO（AIO）的方式来处理磁盘操作。AIO的另一个优势是可以进行IO Merge操作，也就是将多个IO合并为1个IO，这样可以提高IOPS的性能。</p>
+<h3 id="5-刷新邻接页"><a href="#5-刷新邻接页" class="headerlink" title="5. 刷新邻接页"></a>5. 刷新邻接页</h3><p>当刷新一个脏页时，InnoDB存储引擎会检测该页所在区（extent）的所有页，如果是脏页，那么一起进行刷新。这样做的好处显而易见，通过AIO可以将多个IO写入操作合并为一个IO操作，故该工作机制在传统机械磁盘下有着显著的优势。</p>
+]]></content>
+      <categories>
+        <category>Mysql</category>
+      </categories>
+      <tags>
+        <tag>mysql</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>epoll数据结构</title>
+    <url>/io-epoll-structure.html</url>
+    <content><![CDATA[<p>不管是从事前端开发人员还是后端开发人员，他们在部署服务时，第一个想到的就是用Nginx做代理和静态资源缓存，因为Nginx经过千锤百炼，足以应对百万并发。</p>
+<p>但是对于Nginx这种高效web服务，它底层到底有什么神秘武器支持大流量并发呢？答案就在<code>epoll</code><br>里面。</p>
+<span id="more"></span>
+
+<h2 id="1-epoll-数据结构-算法"><a href="#1-epoll-数据结构-算法" class="headerlink" title="1. epoll 数据结构 + 算法"></a>1. epoll 数据结构 + 算法</h2><img data-src="../images/pic/io-epoll-structure/modb_20211206_b483f684-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>epoll 的核心数据结构是：1个<code>红黑树</code> 和1个<code>双向链表</code><br>。还有<code>3个核心API</code><br>。如上图所示。</p>
+<h2 id="2-监视socket索引-红黑树"><a href="#2-监视socket索引-红黑树" class="headerlink" title="2. 监视socket索引-红黑树"></a>2. 监视socket索引-红黑树</h2><p>为什么采用红黑树呢？因为和epoll的工作机制有关。epoll在添加一个socket或者删除一个socket或者修改一个socket的时候，它需要查询速度更快，操作效率最高，因此需要一个更加优秀的数据结构能够管理这些socket。</p>
+<p>我们想到的比如链表，数组，二叉搜索树，B+树等都无法满足要求，</p>
+<ul>
+<li><p>因为链表在查询，删除的时候毫无疑问时间复杂度是O(n)；</p>
+</li>
+<li><p>数组查询很快，但是删除和新增时间复杂度是O(n)；</p>
+</li>
+<li><p>二叉搜索树虽然查询效率是lgn，但是如果不是平衡的，那么就会退化为线性查找，复杂度直接来到O(n)；</p>
+</li>
+<li><p>B+树是平衡多路查找树，主要是通过降低树的高度来存储上亿级别的数据，但是它的应用场景是内存放不下的时候能够用最少的IO访问次数从磁盘获取数据。比如数据库聚簇索引，成百上千万的数据内存无法满足查找就需要到内存查找，而因为B+树层高很低，只需要几次磁盘IO就能获取数据到内存，所以在这种磁盘到内存访问上B+树更适合。</p>
+</li>
+</ul>
+<p>因为我们处理上万级的fd，它们本身的存储空间并不会很大，所以倾向于在内存中去实现管理，而红黑树是一种非常优秀的平衡树，它完全是在内存中操作，而且查找，删除和新增时间复杂度都是lgn，效率非常高，因此选择用红黑树实现epoll是最佳的选择。</p>
+<p>当然不选择用AVL树是因为红黑树是不符合AVL树的平衡条件的，红黑是用非严格的平衡来换取增删节点时候旋转次数的降低，任何不平衡都会在三次旋转之内解决；而AVL树是严格平衡树，在增加或者删除节点的时候，根据不同情况，旋转的次数比红黑树要多。所以红黑树的插入效率更高。</p>
+<h2 id="3-就绪socket列表-双向链表"><a href="#3-就绪socket列表-双向链表" class="headerlink" title="3. 就绪socket列表-双向链表"></a>3. 就绪socket列表-双向链表</h2><p>就绪列表存储的是就绪的socket，所以它应能够快速的插入数据。</p>
+<p>程序可能随时调用epoll_ctl添加监视socket，也可能随时删除。当删除时，若该socket已经存放在就绪列表中，它也应该被移除。（事实上，每个epoll_item既是红黑树节点，也是链表节点，删除红黑树节点，自然删除了链表节点）</p>
+<p>所以就绪列表应是一种能够快速插入和删除的数据结构。双向链表就是这样一种数据结构，epoll使用<code>双向链表来实现就绪队列</code>  （rdllist）</p>
+<h2 id="4-三个API"><a href="#4-三个API" class="headerlink" title="4. 三个API"></a>4. 三个API</h2><h3 id="4-1-int-epoll-create-int-size"><a href="#4-1-int-epoll-create-int-size" class="headerlink" title="4.1 int epoll_create(int size)"></a>4.1 int epoll_create(int size)</h3><p>功能：</p>
+<p>内核会产生一个epoll 实例数据结构并返回一个文件描述符epfd，这个特殊的描述符就是epoll实例的句柄，后面的两个接口都以它为中心。同时也会创建红黑树和就绪列表，红黑树来管理注册fd，就绪列表来收集所有就绪fd。size参数表示所要监视文件描述符的最大值，不过在后来的Linux版本中已经被弃用（同时，size不要传0，会报invalid argument错误）</p>
+<h3 id="4-2-int-epoll-ctl-int-epfd，-int-op，-int-fd，-struct-epoll-event-event"><a href="#4-2-int-epoll-ctl-int-epfd，-int-op，-int-fd，-struct-epoll-event-event" class="headerlink" title="4.2 int epoll_ctl(int epfd， int op， int fd， struct epoll_event *event)"></a>4.2 int epoll_ctl(int epfd， int op， int fd， struct epoll_event *event)</h3><p>功能：</p>
+<p>将被监听的socket文件描述符添加到红黑树或从红黑树中删除或者对监听事件进行修改；同时向内核中断处理程序注册一个回调函数，内核在检测到某文件描述符可读&#x2F;可写时会调用回调函数，该回调函数将文件描述符放在就绪链表中。</p>
+<h3 id="4-3-int-epoll-wait-int-epfd，-struct-epoll-event-events，-int-maxevents，-int-timeout"><a href="#4-3-int-epoll-wait-int-epfd，-struct-epoll-event-events，-int-maxevents，-int-timeout" class="headerlink" title="4.3 int epoll_wait(int epfd， struct epoll_event *events， int maxevents， int timeout);"></a>4.3 int epoll_wait(int epfd， struct epoll_event *events， int maxevents， int timeout);</h3><p>功能：</p>
+<p>阻塞等待注册的事件发生，返回事件的数目，并将触发的事件写入events数组中。</p>
+<p>events: 用来记录被触发的events，其大小应该和maxevents一致</p>
+<p>maxevents: 返回的events的最大个数处于ready状态的那些文件描述符会被复制进ready list中，epoll_wait用于向用户进程返回ready list(就绪列表)。</p>
+<p>events和maxevents两个参数描述一个由用户分配的struct epoll event数组，调用返回时，内核将就绪列表(双向链表)复制到这个数组中，并将实际复制的个数作为返回值。</p>
+<p>注意，如果就绪列表比maxevents长，则只能复制前maxevents个成员；反之，则能够完全复制就绪列表。</p>
+<p>另外，struct epoll event结构中的events域在这里的解释是：<code>在被监测的文件描述符上实际发生的事件</code>  </p>
+<h3 id="4-4-小结"><a href="#4-4-小结" class="headerlink" title="4.4 小结"></a>4.4 小结</h3><p>调用epoll_create时，在内核cache里建了个<code>红黑树</code><br>用于存储以后epoll_ctl传来的socket外，还会再建立一个list链表，用于存储准备就绪的事件。</p>
+<p>当epoll_wait调用时，仅仅观察这个双向链表里有没有数据即可。有数据就返回，没有数据就sleep，等到timeout时间到后即使链表没数据也返回。所以，epoll_wait非常高效。而且，通常情况下即使我们要监控百万计的句柄，大多一次也只返回很少量的准备就绪句柄而已，所以，epoll_wait仅需要从内核态copy少量的句柄到用户态而已。</p>
+<h2 id="5-实现细节"><a href="#5-实现细节" class="headerlink" title="5. 实现细节"></a>5. 实现细节</h2><p><img data-src="/../images/pic/io-epoll-structure/modb_20211206_b4d7bf3a-5649-11ec-907e-fa163eb4f6be.png"></p>
+<p>linux采用eventpoll数据结构来管理epoll，红黑树每个节点用epitime数据结构来管理，具体请参考linux3.16：eventpoll.c 和 eventpoll.h 主要位于fs&#x2F;eventpoll.c 和 include&#x2F;linux&#x2F;eventpool.h ，文章末尾源码连接也可以看哦。</p>
+<p>有了这两个核心数据结构之后，那么在处理事件和就绪队列的时候就会高效的多。</p>
+<h2 id="6-整个Nginx-epoll流程"><a href="#6-整个Nginx-epoll流程" class="headerlink" title="6. 整个Nginx epoll流程"></a>6. 整个Nginx epoll流程</h2><p>结合前几篇Nginx文章我们知道worker进程是最终处理请求的，因此事件循环在worker里面进行。核心主流程就是多个worker进程去竞争锁，拿到锁的worker进程注册文件描述符fd到epoll的红黑树中，然后worker进程在等待就绪fd的时候将自己挂起。等内核获取到中断信号之后会发起回调，将已经就绪的fd写入到双向链表，然后内核遍历链表将fd拷贝到用户口空间的event_list中，这样被挂起的worker进程就会被唤醒(之前阻塞在这里是因为没有fd就绪，现在数组有fd了，会换新进程)，通过遍历event_list执行fd相应事件的回调，这样请求就从worker进来，经过epoll处理之后将我们关心的fd事件通过回调的方式通知到Nginx，Nginx可以做进一步处理，最后也释放了锁。如下图：</p>
+<img data-src="../images/pic/io-epoll-structure/modb_20211206_b4ea9f9c-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>源码地址在文章末尾哈。遍历就绪事件的核心处理逻辑是：ngx_epoll_process_events</p>
+<h2 id="7-epoll更高效的原因"><a href="#7-epoll更高效的原因" class="headerlink" title="7. epoll更高效的原因"></a>7. epoll更高效的原因</h2><p>有人说epoll使用了mmap，我找了源码半天没有找到，真的想打人。根据以上分析，epoll_ctl注册fd到红黑树拷贝一次，然后从就绪队列拷贝少量的fd到数组中又是一次拷贝，整体而言拷贝比较少(因为活跃的比较少，遇到大量活跃的可能性能就比较差了)。再加上少量轮循就可以处理就绪fd，所以效率非常高。</p>
+<h2 id="8-总结"><a href="#8-总结" class="headerlink" title="8. 总结"></a>8. 总结</h2><img data-src="../images/pic/io-epoll-structure/modb_20211206_b51d50f4-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>参考：所有相关提到的数据结构可以在源码中找到，因为贴出来篇幅太大，所以把地址放到这里，供大家参考：</p>
+<p><a href="https://www.kancloud.cn/digest/understandingnginx/202601">https://www.kancloud.cn/digest/understandingnginx/202601</a></p>
+<p><a href="https://xie.infoq.cn/article/2ee961483c66a146709e7e861">https://xie.infoq.cn/article/2ee961483c66a146709e7e861</a></p>
+<p><a href="https://cloud.tencent.com/developer/article/1805838">https://cloud.tencent.com/developer/article/1805838</a></p>
+<p><a href="https://xie.infoq.cn/article/1a956ec3827587c2618d0a4b2">https://xie.infoq.cn/article/1a956ec3827587c2618d0a4b2</a></p>
+]]></content>
+      <categories>
+        <category>IO</category>
+      </categories>
+      <tags>
+        <tag>IO</tag>
+        <tag>IO多路复用</tag>
+        <tag>数据结构</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>TCP面经</title>
+    <url>/tcp-experience.html</url>
+    <content><![CDATA[<h2 id="1-写在前头"><a href="#1-写在前头" class="headerlink" title="1. 写在前头"></a>1. 写在前头</h2><p>重新整理了一下TCP相关的面经和高频知识点，它不一定全也可能出现错误，非常希望大家能够补充和勘误！</p>
+<span id="more"></span>
+
+<h2 id="2-TCP相关面经-和高频知识点"><a href="#2-TCP相关面经-和高频知识点" class="headerlink" title="2. TCP相关面经]和高频知识点"></a>2. TCP相关面经]和高频知识点</h2><blockquote>
+<p>以下知识点的思路是<code>从TCP概念的四个点逐点深挖</code>，不知道大家读完能不能有所体会：为什么这么写</p>
+</blockquote>
+<ul>
+<li>TCP是<code>可靠的</code>、<code>面向连接的</code>、<code>基于字节流的</code>、<code>全双工的</code>传输层协议</li>
+</ul>
+<ol>
+<li>为什么是<code>可靠的</code>？<br>1 使用<code>检验和</code>来验证传输报文中的错误<br>2 使用定时器来进行<code>超时重传</code><br>3 使用<code>序列号</code>来检测乱序、丢失和冗余，使用确认应答报文使发送方确认收到信息<br>4 TCP使用<code>流量控制</code>和<code>拥塞控制</code>来保证可靠性</li>
+</ol>
+<ul>
+<li><p>什么是<code>流量控制</code>？<br>TCP会把要发送的数据放入<code>发送缓冲区</code>，接收到的数据放入<code>接收缓冲区</code>，流量控制做的就是，<code>根据</code>接收缓冲区的接收能力（剩余可接收数据的空间），<code>调节</code>发送端发送数据的滑动窗口大小，<code>使得发送方的发送速率与接收方的接收速率相匹配</code>，流量控制是<code>基于发送端和接收端的控制机制</code><br>（TCP 在收到数据包回复的 ACK 报文里会带上自己接收窗口的大小，接收端需要根据这个值调整自己的发送策略）</p>
+</li>
+<li><p>如果<code>发送方的滑动窗口变为0了</code>，那么它之后怎么确定它又能向接收端发送数据了呢？<br>TCP设计了<code>零窗口探测的机制</code>，用来向接收端探测接收窗口的大小，在接收端有接收能力的时候就能再次发送数据了</p>
+</li>
+<li><p>什么是<code>零窗口探测机制</code>？<br>零窗口探测机制是发送端会发送一个<code>零窗口探测的包</code>，其实就是一个ACK报文，以此来知悉接收方是否具备接收能力</p>
+</li>
+<li><p>什么是<code>拥塞控制</code>？<br>拥塞控制是<code>基于整个网络的通信情况</code>，在网络中对资源的请求超过资源可用量的情况叫拥塞（吞吐量小于理想吞吐量），TCP的发送方会根据在目的路径之间没什么拥塞而增加发送速率，若有拥塞则降低发送速率。通过超时或连续接收到3个冗余的ACK报文来判断拥塞，发送速率由拥塞窗口来控制。拥塞控制涉及<code>慢启动</code>、<code>拥塞避免</code>、<code>快重传</code>、<code>快恢复</code>四种<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a>，它的本质是<code>控制拥塞窗口的变化</code></p>
+</li>
+<li><p>什么是<code>拥塞窗口</code>？<br>拥塞窗口指的是<code>在收到对端 ACK 之前</code>自己还能传输的<a href="/jump/super-jump/word?word=%E6%9C%80%E5%A4%A7%E6%95%B0">最大数</a>据量大小，这里要与<code>滑动窗口</code>区分开，滑动窗口的大小是根据接收到的对端ACK报文中接收窗口的大小来指定的</p>
+</li>
+<li><p>那么真正的<code>发送窗口大小</code>是取决于滑动窗口的大小还是拥塞窗口的大小？<br>取的是两者间的最小值，如果滑动窗口比拥塞窗口小，表示接收端处理能力不够；如果拥塞窗口小于滑动窗口，表示接收端处理能力 ok，但网络拥塞</p>
+</li>
+<li><p>说说拥塞控制的<code>四个[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>吧<br>发送方维护一个叫做拥塞窗口的状态变量Cwnd，其值取决于网络拥塞程度，动态变化，慢启动<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a>阈值ssthresh，发送窗口大小Swnd<br><code>慢启动[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：发送窗口大小 &#x3D; 拥塞窗口大小（一个较小的值MSS），随着双方通信，收到确认应答报文，拥塞窗口指数级增长，超过慢开始阈值后，使用拥塞避免<a href="/jump/super-jump/word?word=%E7%AE%97%E6%B3%95">算法</a><br><code>拥塞避免[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：拥塞窗口随着传输轮次增大，当cwnd &gt; ssthresh，拥塞窗口的大小呈线性增长<br><code>快重传[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：在传输过程中有报文丢失，发送方累计连续3次收到重复确认报文，就将相应的报文段立即重传，而不是在该报文段的超时重传计时器超时重传<br><code>快恢复[算法](/jump/super-jump/word?word=%E7%AE%97%E6%B3%95)</code>：当收到三次重复确认报文后，进入快恢复阶段。拥塞窗口大小 cwnd 设置为 ssthresh，将拥塞阈值 ssthresh 降低为 cwnd 的一半，再进行线性增长</p>
+</li>
+</ul>
+<ol start="2">
+<li>什么是<code>面向连接的</code>？<br>在正式发送请求数据之前需要通过<code>三次握手建立连接</code>，结束通信通过<code>四次挥手断开连接</code></li>
+</ol>
+<ul>
+<li><p>什么是三次握手？<br><code>第一次握手</code>：客户端发送SYN报文，并且会随机选择一个数字作为初始化的序列号，请求建立连接<br><code>第二次握手</code>：服务端收到客户端的SYN报文后，也会发送一个SYN报文，并随机生成初始化序列号，同时还会发送客户端SYN报文对应的ACK确认应答报文给客户端，其中ACK报文中的确认号等于客户端序列号加一<br><code>第三次握手</code>：客户端收到服务端的SYN报文后，还要发送ACK确认应答报文给服务器，其确认号等于服务端序列号加一，三次握手完成，双方建立连接</p>
+</li>
+<li><p>为什么序列号<code>是随机生成的而不是从0开始</code>？<br>出于安全性考虑。如果被知道了连接的序列号，很容易伪造 RST 包，这样就可以将连接强制关闭掉了。如果采用动态增长的 ISN，要想构造一个在对方窗口内的序列号难度就大很多了</p>
+</li>
+<li><p><code>为什么要三次握手才能建立连接</code>？<br>1 防止已经失效的连接请求报文传送到服务器产生脏连接<br>2 为了实现可靠的数据传输，TCP连接双方都需要维护一个序列号，若是两次握手的话，服务端发送的序列号得不到确认（客户端可以接收到序列号，但是没有确认收到的回应发送给服务器）</p>
+</li>
+<li><p>那么能<code>四次握手</code>吗？<br>可以，将服务器的第二次握手拆成两次，一次发送客户端的确认应答ACK报文，另一次发送SYN数据报文，这样就变成了四次握手<br><img data-src="/../images/pic/tcp-experience/c9653430a745419b950db1d338eb8dd0-20220314194338106.png" alt="在这里插入图片描述"></p>
+</li>
+<li><p>什么是四次挥手？<br><code>第一次挥手</code>：客户端向服务器发送一个FIN终止连接报文，从这以后客户端不再发送数据给服务端，但是能接受服务端的数据，客户端进入FIN-WAIT-1状态<br><code>第二次挥手</code>：服务器收到该报文后，发送给客户端一个ACK确认报文，服务端进入CLOSE_WAIT状态，客户端收到 ACK 以后进入FIN-WAIT-2状态<br><code>第三次挥手</code>：服务端在发送完数据，准备释放连接连接时，会向客户端发送FIN终止连接报文，然后进入LAST-ACK状态，等待客户端的ACK确认应答报文<br><code>第四次挥手</code>：客户端收到服务端的FIN报文后，发送ACK确认报文，<code>等待2MSL后</code>，进入CLOSED状态</p>
+</li>
+<li><p><code>为什么是四次挥手</code>？<br>客户端和服务器采用的是全双工通信，发送方和接收方都需要发送FIN终止链接报文和ACK确认应答报文才能断开</p>
+</li>
+<li><p><code>变成三次</code>可以吗？<br>是可以的，可以将第二次挥手和第三次挥手变成一次挥手，同时发送ACK确认应答报文和FIN终止连接报文给客户端，这样就变成了三次挥手<br><img data-src="/../images/pic/tcp-experience/bbcd43a69e7341288d4a3863dafe0b54-20220314194338104.png" alt="在这里插入图片描述"></p>
+</li>
+<li><p>什么是<code>MSL</code>？<br>MSL（报文最大生存时间）是 TCP 报文在网络中的最大生存时间。这个值与 IP 报文头的 TTL（Time to live） 字段有密切的关系，它不是具体的时间，而是IP报文最多可以经过的路由器数量，每经过一个路由器，TTL的值减一，当它为0时报文则被丢弃，<code>指定TTL减为0的时间不能超过MSL秒</code></p>
+</li>
+<li><p>为什么要<code>等待2MSL</code>后才能释放连接？<br>1 等待2MSL可以保证连接的所有报文都会从网络上消失，防止新旧连接的混淆<br>2 确保可靠实现 TCP 全双工终止连接，保证服务端能接收到客户端发送的确认报文（如果该报文丢失，服务端没收收到就会超时重传之前的终止连接报文，若客户端直接进入closed状态，则无法收到该报文，也不会发送确认报文，那么服务器就无法正常进入closed状态）</p>
+</li>
+<li><p>为什么时间是两个MSL？<br>1 个 MSL 确保四次挥手中<code>主动关闭方最后的 ACK 报文最终能达到对端</code>；<br>1 个 MSL 确保<code>对端没有收到 ACK 重传的 FIN 报文可以到达</code>；<br>2MSL &#x3D; 去向 ACK 消息最大存活时间（MSL) + 来向 FIN 消息的最大存活时间（MSL）</p>
+</li>
+</ul>
+<ol start="3">
+<li>什么是<code>基于字节流的</code>？<br>在<code>发送报文之前</code>会将数据写入内核缓冲区，比如写入了800字节，那么这800字节的数据最终会以多少条报文发送出去是不确定的，这取决于路径最大传输单元 （MTU）、发送窗口大小、拥塞窗口大小等原因，<code>流强调的是报文数据没有边界</code>，也就是说它会有很多种情况发送出去，这800字节可能是200字节、200字节、400字节这样发送的</li>
+</ol>
+<ul>
+<li><p>什么是<code>最大传输单元MTU</code>？<br><code>数据链路层</code>传输的帧大小是有限制的，不能把一个太大的包直接塞给链路层，这个限制被称为<code>最大传输单元</code>（Maximum Transmission Unit, MTU）。一个包从发送端传输到接收端，中间要跨越很多网络，而每个网络的MTU可能不太一样，那么在通信过程中的最小MTU被称为<code>路径MTU</code>，是由网络中最小的MTU来决定的，就像是木桶效应</p>
+</li>
+<li><p>知道<code>MSS</code>吗？<br>TCP <code>为了避免被发送方分片</code>，会主动把数据分割成小段再交给网络层，最大的分段大小称之为 MSS（Max Segment Size）</p>
+</li>
+</ul>
+<ol start="4">
+<li>什么是<code>全双工通信</code>？<br>在通信过程中，发送端和接收端既可以是客户端也可以是服务器</li>
+</ol>
+<ul>
+<li>听说过<code>TFO</code>吗？<br>TFO是在TCP协议上的扩展协议，当<code>客户端与服务器已经成功建立过正常的TCP三次握手</code>后，那么再次发送SYN请求建立连接的报文时就同时会传输数据了，它的<code>显著优势</code>是相比常规三次握手<code>节省一个RTT的往返时间</code></li>
+</ul>
+<h2 id="3-TCP的11种状态"><a href="#3-TCP的11种状态" class="headerlink" title="3 TCP的11种状态"></a>3 TCP的11种状态</h2><blockquote>
+<p>我按照如下三类进行了划分，感觉这样相比于把11种状态画在一个表格里更容易理解</p>
+</blockquote>
+<h3 id="3-1-初始状态"><a href="#3-1-初始状态" class="headerlink" title="3.1 初始状态"></a>3.1 初始状态</h3><p><img data-src="/../images/pic/tcp-experience/db213a7ad4ed4b5eb48cf66169434a0b-20220314194338777.png" alt="在这里插入图片描述"></p>
+<h3 id="3-2-三次握手状态"><a href="#3-2-三次握手状态" class="headerlink" title="3.2 三次握手状态"></a>3.2 三次握手状态</h3><p><img data-src="/../images/pic/tcp-experience/80f00a81c0ee4f9fa2b78b60ccfde86f-20220314194339223.png" alt="在这里插入图片描述"></p>
+<h3 id="3-3-四次挥手状态"><a href="#3-3-四次挥手状态" class="headerlink" title="3.3 四次挥手状态"></a>3.3 四次挥手状态</h3><p><img data-src="/../images/pic/tcp-experience/8b0bf75f7a65436e8a7e6e9ee9013ac4-20220314194340211.png" alt="在这里插入图片描述"></p>
+<hr>
+<p><strong>补充和勘误欢迎留言，看到都会修改</strong>## 目标</p>
+<p>去除 iconfinder 上 icon 的水印</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>利用水印像素点和原图像素点颜色合并的原理，如果拥有加过水印的图片和水印图片，就可以反向推出原图原像素点的颜色；前提是你得拥有他的水印图片</p>
+]]></content>
+      <categories>
+        <category>计算机网络</category>
+      </categories>
+      <tags>
+        <tag>TCP/IP</tag>
+        <tag>网络</tag>
+        <tag>面经</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>TCP协议灵魂之问</title>
+    <url>/tcp-protocol.html</url>
+    <content><![CDATA[<p>先亮出这篇文章的思维导图:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-dbbdb2ba824a121f18a66059ac0b5ac2_1440w.jpg"></p>
+<span id="more"></span>
+
+<p>TCP 作为传输层的协议，是一个软件工程师素养的体现，也是面试中经常被问到的知识点。在此，我将 TCP 核心的一些问题梳理了一下，希望能帮到各位。</p>
+<h2 id="001-能不能说一说-TCP-和-UDP-的区别？"><a href="#001-能不能说一说-TCP-和-UDP-的区别？" class="headerlink" title="001. 能不能说一说 TCP 和 UDP 的区别？"></a>001. 能不能说一说 TCP 和 UDP 的区别？</h2><p>首先概括一下基本的区别:</p>
+<p><strong>TCP是一个面向连接的、可靠的、基于字节流的传输层协议。</strong></p>
+<p>而<strong>UDP是一个面向无连接的传输层协议。</strong>(就这么简单，其它TCP的特性也就没有了)。</p>
+<p>具体来分析，和 UDP 相比，TCP 有三大核心特性:</p>
+<ol>
+<li><strong>面向连接</strong>。所谓的连接，指的是客户端和服务器的连接，在双方互相通信之前，TCP 需要三次握手建立连接，而 UDP 没有相应建立连接的过程。</li>
+<li><strong>可靠性</strong>。TCP 花了非常多的功夫保证连接的可靠，这个可靠性体现在哪些方面呢？一个是有状态，另一个是可控制。</li>
+</ol>
+<p>TCP 会精准记录哪些数据发送了，哪些数据被对方接收了，哪些没有被接收到，而且保证数据包按序到达，不允许半点差错。这是<strong>有状态</strong>。</p>
+<p>当意识到丢包了或者网络环境不佳，TCP 会根据具体情况调整自己的行为，控制自己的发送速度或者重发。这是<strong>可控制</strong>。</p>
+<p>相应的，UDP 就是无状态, 不可控的。</p>
+<ol>
+<li><strong>面向字节流</strong>。UDP 的数据传输是基于数据报的，这是因为仅仅只是继承了 IP 层的特性，而 TCP 为了维护状态，将一个个 IP 包变成了字节流。</li>
+</ol>
+<h2 id="002-说说-TCP-三次握手的过程？为什么是三次而不是两次、四次？"><a href="#002-说说-TCP-三次握手的过程？为什么是三次而不是两次、四次？" class="headerlink" title="002: 说说 TCP 三次握手的过程？为什么是三次而不是两次、四次？"></a>002: 说说 TCP 三次握手的过程？为什么是三次而不是两次、四次？</h2><h3 id="恋爱模拟"><a href="#恋爱模拟" class="headerlink" title="恋爱模拟"></a>恋爱模拟</h3><p>以谈恋爱为例，两个人能够在一起最重要的事情是首先确认各自<strong>爱</strong>和<strong>被爱</strong>的能力。接下来我们以此来模拟三次握手的过程。</p>
+<p>第一次:</p>
+<p>男: <strong>我爱你。</strong></p>
+<p>女方收到。</p>
+<p>由此证明男方拥有爱的能力。</p>
+<p>第二次:</p>
+<p>女: <strong>我收到了你的爱，我也爱你。</strong></p>
+<p>男方收到。</p>
+<p>OK，现在的情况说明，女方拥有爱和被爱的能力。</p>
+<p>第三次:</p>
+<p>男: <strong>我收到了你的爱。</strong></p>
+<p>女方收到。</p>
+<p>现在能够保证男方具备被爱的能力。</p>
+<p>由此完整地确认了双方爱和被爱的能力，两人开始一段甜蜜的爱情。</p>
+<h3 id="真实握手"><a href="#真实握手" class="headerlink" title="真实握手"></a>真实握手</h3><p>当然刚刚那段属于扯淡，不代表本人价值观，目的是让大家理解整个握手过程的意义，因为两个过程非常相似。对应到 TCP 的三次握手，也是需要确认双方的两样能力: 发送的能力和接收的能力。于是便会有下面的三次握手的过程:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-859c73d767b7211e7f094ecaa4938fde_1440w.jpg"></p>
+<p>从最开始双方都处于CLOSED状态。然后服务端开始监听某个端口，进入了LISTEN状态。</p>
+<p>然后客户端主动发起连接，发送 SYN , 自己变成了SYN-SENT状态。</p>
+<p>服务端接收到，返回SYN和ACK(对应客户端发来的SYN)，自己变成了SYN-REVD。</p>
+<p>之后客户端再发送ACK给服务端，自己变成了ESTABLISHED状态；服务端收到ACK之后，也变成了ESTABLISHED状态。</p>
+<p>另外需要提醒你注意的是，从图中可以看出，SYN 是需要消耗一个序列号的，下次发送对应的 ACK 序列号要加1，为什么呢？只需要记住一个规则:</p>
+<blockquote>
+<p>凡是需要对端确认的，一定消耗TCP报文的序列号。</p>
+</blockquote>
+<p>SYN 需要对端的确认， 而 ACK 并不需要，因此 SYN 消耗一个序列号而 ACK 不需要。</p>
+<h3 id="为什么不是两次？"><a href="#为什么不是两次？" class="headerlink" title="为什么不是两次？"></a>为什么不是两次？</h3><p>根本原因: 无法确认客户端的接收能力。</p>
+<p>分析如下:</p>
+<p>如果是两次，你现在发了 SYN 报文想握手，但是这个包<strong>滞留</strong>在了当前的网络中迟迟没有到达，TCP 以为这是丢了包，于是重传，两次握手建立好了连接。</p>
+<p>看似没有问题，但是连接关闭后，如果这个<strong>滞留</strong>在网路中的包到达了服务端呢？这时候由于是两次握手，服务端只要接收到然后发送相应的数据包，就默认<strong>建立连接</strong>，但是现在客户端已经断开了。</p>
+<p>看到问题的吧，这就带来了连接资源的浪费。</p>
+<h3 id="为什么不是四次？"><a href="#为什么不是四次？" class="headerlink" title="为什么不是四次？"></a>为什么不是四次？</h3><p>三次握手的目的是确认双方发送和接收的能力，那四次握手可以嘛？</p>
+<p>当然可以，100 次都可以。但为了解决问题，三次就足够了，再多用处就不大了。</p>
+<h3 id="三次握手过程中可以携带数据么？"><a href="#三次握手过程中可以携带数据么？" class="headerlink" title="三次握手过程中可以携带数据么？"></a>三次握手过程中可以携带数据么？</h3><p>第三次握手的时候，可以携带。前两次握手不能携带数据。</p>
+<p>如果前两次握手能够携带数据，那么一旦有人想攻击服务器，那么他只需要在第一次握手中的 SYN 报文中放大量数据，那么服务器势必会消耗更多的<strong>时间</strong>和<strong>内存空间</strong>去处理这些数据，增大了服务器被攻击的风险。</p>
+<p>第三次握手的时候，客户端已经处于ESTABLISHED状态，并且已经能够确认服务器的接收、发送能力正常，这个时候相对安全了，可以携带数据。</p>
+<h3 id="同时打开会怎样？"><a href="#同时打开会怎样？" class="headerlink" title="同时打开会怎样？"></a>同时打开会怎样？</h3><p>如果双方同时发 SYN报文，状态变化会是怎样的呢？</p>
+<p>这是一个可能会发生的情况。</p>
+<p>状态变迁如下:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-c99d5f1fe9d483073ff358adab8e4e24_1440w.jpg"></p>
+<p>在发送方给接收方发SYN报文的同时，接收方也给发送方发SYN报文，两个人刚上了!</p>
+<p>发完SYN，两者的状态都变为SYN-SENT。</p>
+<p>在各自收到对方的SYN后，两者状态都变为SYN-REVD。</p>
+<p>接着会回复对应的ACK + SYN，这个报文在对方接收之后，两者状态一起变为ESTABLISHED。</p>
+<p>这就是同时打开情况下的状态变迁。</p>
+<h2 id="003-说说-TCP-四次挥手的过程"><a href="#003-说说-TCP-四次挥手的过程" class="headerlink" title="003: 说说 TCP 四次挥手的过程"></a>003: 说说 TCP 四次挥手的过程</h2><h3 id="过程拆解"><a href="#过程拆解" class="headerlink" title="过程拆解"></a>过程拆解</h3><p><img data-src="/../images/pic/tcp-protocol/v2-3943c6b3b43a16659578334e18c30003_1440w.jpg"></p>
+<p>刚开始双方处于ESTABLISHED状态。</p>
+<p>客户端要断开了，向服务器发送 FIN 报文。</p>
+<p>发送后客户端变成了FIN-WAIT-1状态。注意, 这时候客户端同时也变成了half-close(半关闭)状态，即无法向服务端发送报文，只能接收。</p>
+<p>服务端接收后向客户端确认，变成了CLOSED-WAIT状态。</p>
+<p>客户端接收到了服务端的确认，变成了FIN-WAIT2状态。</p>
+<p>随后，服务端向客户端发送FIN，自己进入LAST-ACK状态，</p>
+<p>客户端收到服务端发来的FIN后，自己变成了TIME-WAIT状态，然后发送 ACK 给服务端。</p>
+<p>注意了，这个时候，客户端需要等待足够长的时间，具体来说，是 2 个 MSL(Maximum Segment Lifetime，报文最大生存时间), 在这段时间内如果客户端没有收到服务端的重发请求，那么表示 ACK 成功到达，挥手结束，否则客户端重发 ACK。</p>
+<h3 id="等待2MSL的意义"><a href="#等待2MSL的意义" class="headerlink" title="等待2MSL的意义"></a>等待2MSL的意义</h3><p>如果不等待会怎样？</p>
+<p>如果不等待，客户端直接跑路，当服务端还有很多数据包要给客户端发，且还在路上的时候，若客户端的端口此时刚好被新的应用占用，那么就接收到了无用数据包，造成数据包混乱。所以，最保险的做法是等服务器发来的数据包都死翘翘再启动新的应用。</p>
+<p>那，照这样说一个 MSL 不就不够了吗，为什么要等待 2 MSL?</p>
+<ul>
+<li>1 个 MSL 确保四次挥手中主动关闭方最后的 ACK 报文最终能达到对端</li>
+<li>1 个 MSL 确保对端没有收到 ACK 重传的 FIN 报文可以到达</li>
+</ul>
+<p>这就是等待 2MSL 的意义。</p>
+<h3 id="为什么是四次挥手而不是三次？"><a href="#为什么是四次挥手而不是三次？" class="headerlink" title="为什么是四次挥手而不是三次？"></a>为什么是四次挥手而不是三次？</h3><p>因为服务端在接收到FIN, 往往不会立即返回FIN, 必须等到服务端所有的报文都发送完毕了，才能发FIN。因此先发一个ACK表示已经收到客户端的FIN，延迟一段时间才发FIN。这就造成了四次挥手。</p>
+<p>如果是三次挥手会有什么问题？</p>
+<p>等于说服务端将ACK和FIN的发送合并为一次挥手，这个时候长时间的延迟可能会导致客户端误以为FIN没有到达客户端，从而让客户端不断的重发FIN。</p>
+<h3 id="同时关闭会怎样？"><a href="#同时关闭会怎样？" class="headerlink" title="同时关闭会怎样？"></a>同时关闭会怎样？</h3><p>如果客户端和服务端同时发送 FIN ，状态会如何变化？如图所示:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-5420c5865277deb412a7908957be7076_1440w.jpg"></p>
+<h2 id="004-说说半连接队列和-SYN-Flood-攻击的关系"><a href="#004-说说半连接队列和-SYN-Flood-攻击的关系" class="headerlink" title="004: 说说半连接队列和 SYN Flood 攻击的关系"></a>004: 说说半连接队列和 SYN Flood 攻击的关系</h2><p>三次握手前，服务端的状态从CLOSED变为LISTEN, 同时在内部创建了两个队列：<strong>半连接队列</strong>和<strong>全连接队列</strong>，即<strong>SYN队列</strong>和<strong>ACCEPT队列</strong>。</p>
+<h3 id="半连接队列"><a href="#半连接队列" class="headerlink" title="半连接队列"></a>半连接队列</h3><p>当客户端发送SYN到服务端，服务端收到以后回复ACK和SYN，状态由LISTEN变为SYN_RCVD，此时这个连接就被推入了<strong>SYN队列</strong>，也就是<strong>半连接队列</strong>。</p>
+<h3 id="全连接队列"><a href="#全连接队列" class="headerlink" title="全连接队列"></a>全连接队列</h3><p>当客户端返回ACK, 服务端接收后，三次握手完成。这个时候连接等待被具体的应用取走，在被取走之前，它会被推入另外一个 TCP 维护的队列，也就是**全连接队列(Accept Queue)**。</p>
+<h3 id="SYN-Flood-攻击原理"><a href="#SYN-Flood-攻击原理" class="headerlink" title="SYN Flood 攻击原理"></a>SYN Flood 攻击原理</h3><p>SYN Flood 属于典型的 DoS&#x2F;DDoS 攻击。其攻击的原理很简单，就是用客户端在短时间内伪造大量不存在的 IP 地址，并向服务端疯狂发送SYN。对于服务端而言，会产生两个危险的后果:</p>
+<ol>
+<li>处理大量的SYN包并返回对应ACK, 势必有大量连接处于SYN_RCVD状态，从而占满整个<strong>半连接队列</strong>，无法处理正常的请求。</li>
+<li>由于是不存在的 IP，服务端长时间收不到客户端的ACK，会导致服务端不断重发数据，直到耗尽服务端的资源。</li>
+</ol>
+<h3 id="如何应对-SYN-Flood-攻击？"><a href="#如何应对-SYN-Flood-攻击？" class="headerlink" title="如何应对 SYN Flood 攻击？"></a>如何应对 SYN Flood 攻击？</h3><ol>
+<li>增加 SYN 连接，也就是增加半连接队列的容量。</li>
+<li>减少 SYN + ACK 重试次数，避免大量的超时重发。</li>
+<li>利用 SYN Cookie 技术，在服务端接收到SYN后不立即分配连接资源，而是根据这个SYN计算出一个Cookie，连同第二次握手回复给客户端，在客户端回复ACK的时候带上这个Cookie值，服务端验证 Cookie 合法之后才分配连接资源。</li>
+</ol>
+<h2 id="005-介绍一下-TCP-报文头部的字段"><a href="#005-介绍一下-TCP-报文头部的字段" class="headerlink" title="005: 介绍一下 TCP 报文头部的字段"></a>005: 介绍一下 TCP 报文头部的字段</h2><h3 id="源端口、目标端口"><a href="#源端口、目标端口" class="headerlink" title="源端口、目标端口"></a>源端口、目标端口</h3><p>如何标识唯一标识一个连接？答案是 TCP 连接的四元组——源 IP、源端口、目标 IP 和目标端口。</p>
+<p>那 TCP 报文怎么没有源 IP 和目标 IP 呢？这是因为在 IP 层就已经处理了 IP 。TCP 只需要记录两者的端口即可。</p>
+<h3 id="序列号"><a href="#序列号" class="headerlink" title="序列号"></a>序列号</h3><p>即Sequence number, 指的是本报文段第一个字节的序列号。</p>
+<p>从图中可以看出，序列号是一个长为 4 个字节，也就是 32 位的无符号整数，表示范围为 0 ~ 2^32 - 1。如果到达最大值了后就循环到0。</p>
+<p>序列号在 TCP 通信的过程中有两个作用: 1. 在 SYN 报文中交换彼此的初始序列号。 2. 保证数据包按正确的顺序组装。</p>
+<h3 id="ISN"><a href="#ISN" class="headerlink" title="ISN"></a>ISN</h3><p>即Initial Sequence Number（初始序列号）,在三次握手的过程当中，双方会用过SYN报文来交换彼此的 ISN。</p>
+<p>ISN 并不是一个固定的值，而是每 4 ms 加一，溢出则回到 0，这个算法使得猜测 ISN 变得很困难。那为什么要这么做？</p>
+<p>如果 ISN 被攻击者预测到，要知道源 IP 和源端口号都是很容易伪造的，当攻击者猜测 ISN 之后，直接伪造一个 RST 后，就可以强制连接关闭的，这是非常危险的。</p>
+<p>而动态增长的 ISN 大大提高了猜测 ISN 的难度。</p>
+<h3 id="确认号"><a href="#确认号" class="headerlink" title="确认号"></a>确认号</h3><p>即ACK(Acknowledgment number)。用来告知对方下一个期望接收的序列号，<strong>小于ACK</strong>的所有字节已经全部收到。</p>
+<h3 id="标记位"><a href="#标记位" class="headerlink" title="标记位"></a>标记位</h3><p>常见的标记位有SYN,ACK,FIN,RST,PSH。</p>
+<p>SYN 和 ACK 已经在上文说过，后三个解释如下: FIN： 即 Finish，表示发送方准备断开连接。</p>
+<p>RST：即 Reset，用来强制断开连接。</p>
+<p>PSH： 即 Push, 告知对方这些数据包收到后应该马上交给上层的应用，不能缓存。</p>
+<h3 id="窗口大小"><a href="#窗口大小" class="headerlink" title="窗口大小"></a>窗口大小</h3><p>占用两个字节，也就是 16 位，但实际上是不够用的。因此 TCP 引入了窗口缩放的选项，作为窗口缩放的比例因子，这个比例因子的范围在 0 ~ 14，比例因子可以将窗口的值扩大为原来的 2 ^ n 次方。</p>
+<h3 id="校验和"><a href="#校验和" class="headerlink" title="校验和"></a>校验和</h3><p>占用两个字节，防止传输过程中数据包有损坏，如果遇到校验和有差错的报文，TCP 直接丢弃之，等待重传。</p>
+<h3 id="可选项"><a href="#可选项" class="headerlink" title="可选项"></a>可选项</h3><p>常用的可选项有以下几个:</p>
+<p>- TimeStamp: TCP 时间戳，后面详细介绍。 -</p>
+<p>MSS: 指的是 TCP 允许的从对方接收的最大报文段。</p>
+<p>- SACK: 选择确认选项。</p>
+<p>- Window Scale： 窗口缩放选项。 -</p>
+<h2 id="006-说说-TCP-快速打开的原理-TFO"><a href="#006-说说-TCP-快速打开的原理-TFO" class="headerlink" title="006: 说说 TCP 快速打开的原理(TFO)"></a>006: 说说 TCP 快速打开的原理(TFO)</h2><p>第一节讲了 TCP 三次握手，可能有人会说，每次都三次握手好麻烦呀！能不能优化一点？</p>
+<p>可以啊。今天来说说这个优化后的 TCP 握手流程，也就是 TCP 快速打开(TCP Fast Open, 即TFO)的原理。</p>
+<p>优化的过程是这样的，还记得我们说 SYN Flood 攻击时提到的 SYN Cookie 吗？这个 Cookie 可不是浏览器的Cookie, 用它同样可以实现 TFO。</p>
+<h3 id="TFO-流程"><a href="#TFO-流程" class="headerlink" title="TFO 流程"></a>TFO 流程</h3><h3 id="首轮三次握手"><a href="#首轮三次握手" class="headerlink" title="首轮三次握手"></a>首轮三次握手</h3><p>首先客户端发送SYN给服务端，服务端接收到。</p>
+<p>注意哦！现在服务端不是立刻回复 SYN + ACK，而是通过计算得到一个SYN Cookie, 将这个Cookie放到 TCP 报文的 Fast Open选项中，然后才给客户端返回。</p>
+<p>客户端拿到这个 Cookie 的值缓存下来。后面正常完成三次握手。</p>
+<p>首轮三次握手就是这样的流程。而后面的三次握手就不一样啦！</p>
+<h3 id="后面的三次握手"><a href="#后面的三次握手" class="headerlink" title="后面的三次握手"></a>后面的三次握手</h3><p>在后面的三次握手中，客户端会将之前缓存的 Cookie、SYN 和HTTP请求(是的，你没看错)发送给服务端，服务端验证了 Cookie 的合法性，如果不合法直接丢弃；如果是合法的，那么就正常返回SYN + ACK。</p>
+<p>重点来了，现在服务端能向客户端发 HTTP 响应了！这是最显著的改变，三次握手还没建立，仅仅验证了 Cookie 的合法性，就可以返回 HTTP 响应了。</p>
+<p>当然，客户端的ACK还得正常传过来，不然怎么叫三次握手嘛。</p>
+<p>流程如下:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-8400842fde097a15139515f3887c0e0c_1440w.jpg"></p>
+<p>注意: 客户端最后握手的 ACK 不一定要等到服务端的 HTTP 响应到达才发送，两个过程没有任何关系。</p>
+<h3 id="TFO-的优势"><a href="#TFO-的优势" class="headerlink" title="TFO 的优势"></a>TFO 的优势</h3><p>TFO 的优势并不在与首轮三次握手，而在于后面的握手，在拿到客户端的 Cookie 并验证通过以后，可以直接返回 HTTP 响应，充分利用了<strong>1 个RTT</strong>(Round-Trip Time，往返时延)的时间<strong>提前进行数据传输</strong>，积累起来还是一个比较大的优势。</p>
+<h2 id="007-能不能说说TCP报文中时间戳的作用？"><a href="#007-能不能说说TCP报文中时间戳的作用？" class="headerlink" title="007: 能不能说说TCP报文中时间戳的作用？"></a>007: 能不能说说TCP报文中时间戳的作用？</h2><p>timestamp是 TCP 报文首部的一个可选项，一共占 10 个字节，格式如下:</p>
+<pre><code>kind(1 字节) + length(1 字节) + info(8 个字节)
+</code></pre>
+<p>其中 kind &#x3D; 8， length &#x3D; 10， info 有两部分构成: <strong>timestamp</strong>和<strong>timestamp echo</strong>，各占 4 个字节。</p>
+<p>那么这些字段都是干嘛的呢？它们用来解决那些问题？</p>
+<p>接下来我们就来一一梳理，TCP 的时间戳主要解决两大问题: - 计算往返时延 RTT(Round-Trip Time) - 防止序列号的回绕问题</p>
+<h3 id="计算往返时延-RTT"><a href="#计算往返时延-RTT" class="headerlink" title="计算往返时延 RTT"></a>计算往返时延 RTT</h3><p>在没有时间戳的时候，计算 RTT 会遇到的问题如下图所示:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-56464c07cd5592cfa97bbc661cdb9233_1440w.jpg"></p>
+<p>如果以第一次发包为开始时间的话，就会出现左图的问题，RTT 明显偏大，开始时间应该采用第二次的；</p>
+<p>如果以第二次发包为开始时间的话，就会导致右图的问题，RTT 明显偏小，开始时间应该采用第一次发包的。</p>
+<p>实际上无论开始时间以第一次发包还是第二次发包为准，都是不准确的。</p>
+<p>那这个时候引入时间戳就很好的解决了这个问题。</p>
+<p>比如现在 a 向 b 发送一个报文 s1，b 向 a 回复一个含 ACK 的报文 s2 那么：</p>
+<ul>
+<li><strong>step 1:</strong> a 向 b 发送的时候，timestamp 中存放的内容就是 a 主机发送时的内核时刻 ta1。</li>
+<li><strong>step 2:</strong> b 向 a 回复 s2 报文的时候，timestamp 中存放的是 b 主机的时刻 tb, timestamp echo字段为从 s1 报文中解析出来的 ta1。</li>
+<li><strong>step 3:</strong> a 收到 b 的 s2 报文之后，此时 a 主机的内核时刻是 ta2, 而在 s2 报文中的 timestamp echo 选项中可以得到 ta1, 也就是 s2 对应的报文最初的发送时刻。然后直接采用 ta2 - ta1 就得到了 RTT 的值。</li>
+</ul>
+<h3 id="防止序列号回绕问题"><a href="#防止序列号回绕问题" class="headerlink" title="防止序列号回绕问题"></a>防止序列号回绕问题</h3><p>现在我们来模拟一下这个问题。</p>
+<p>序列号的范围其实是在0 ~ 2 ^ 32 - 1, 为了方便演示，我们缩小一下这个区间，假设范围是 0 ~ 4，那么到达 4 的时候会回到 0。 | 第几次发包 | 发送字节 | 对应序列号 | 状态| |-|-|-|-| |1|0 ~ 1| 0 ~ 1| 成功接收| |2|1 ~ 2| 1 ~ 2| 滞留在网络中| |3|2 ~ 3| 2 ~ 3| 成功接收| |4|3 ~ 4| 3 ~ 4| 成功接收| |5|4 ~ 5| 0 ~ 1| 成功接收，序列号从0开始| |6|5 ~ 6| 1 ~ 2| ？？？|</p>
+<p>假设在第 6 次的时候，之前还滞留在网路中的包回来了，那么就有两个序列号为1 ~ 2的数据包了，怎么区分谁是谁呢？这个时候就产生了序列号回绕的问题。</p>
+<p>那么用 timestamp 就能很好地解决这个问题，因为每次发包的时候都是将发包机器当时的内核时间记录在报文中，那么两次发包序列号即使相同，时间戳也不可能相同，这样就能够区分开两个数据包了。</p>
+<h2 id="008-TCP-的超时重传时间是如何计算的？"><a href="#008-TCP-的超时重传时间是如何计算的？" class="headerlink" title="008: TCP 的超时重传时间是如何计算的？"></a>008: TCP 的超时重传时间是如何计算的？</h2><p>TCP 具有超时重传机制，即间隔一段时间没有等到数据包的回复时，重传这个数据包。</p>
+<p>那么这个重传间隔是如何来计算的呢？</p>
+<p>今天我们就来讨论一下这个问题。</p>
+<p>这个重传间隔也叫做<strong>超时重传时间</strong>(Retransmission TimeOut, 简称RTO)，它的计算跟上一节提到的 RTT 密切相关。这里我们将介绍两种主要的方法，一个是经典方法，一个是标准方法。</p>
+<h3 id="经典方法"><a href="#经典方法" class="headerlink" title="经典方法"></a>经典方法</h3><p>经典方法引入了一个新的概念——SRTT(Smoothed round trip time，即平滑往返时间)，没产生一次新的 RTT. 就根据一定的算法对 SRTT 进行更新，具体而言，计算方式如下(SRTT 初始值为0):</p>
+<pre><code>SRTT =  (α * SRTT) + ((1 - α) * RTT)
+</code></pre>
+<p>其中，α 是<strong>平滑因子</strong>，建议值是0.8，范围是0.8 ~ 0.9。</p>
+<p>拿到 SRTT，我们就可以计算 RTO 的值了:</p>
+<pre><code>RTO = min(ubound, max(lbound, β * SRTT))
+</code></pre>
+<p>β 是加权因子，一般为1.3 ~ 2.0， <strong>lbound</strong> 是下界，<strong>ubound</strong> 是上界。</p>
+<p>其实这个算法过程还是很简单的，但是也存在一定的局限，就是在 RTT 稳定的地方表现还可以，而在 RTT 变化较大的地方就不行了，因为平滑因子 α 的范围是0.8 ~ 0.9, RTT 对于 RTO 的影响太小。</p>
+<h3 id="标准方法"><a href="#标准方法" class="headerlink" title="标准方法"></a>标准方法</h3><p>为了解决经典方法对于 RTT 变化不敏感的问题，后面又引出了标准方法，也叫Jacobson &#x2F; Karels 算法。</p>
+<p>一共有三步。</p>
+<p><strong>第一步</strong>: 计算SRTT，公式如下:</p>
+<pre><code>SRTT = (1 - α) * SRTT + α * RTT
+</code></pre>
+<p>注意这个时候的 α跟经典方法中的α取值不一样了，建议值是1&#x2F;8，也就是0.125。</p>
+<p><strong>第二步</strong>: 计算RTTVAR(round-trip time variation)这个中间变量。</p>
+<pre><code>RTTVAR = (1 - β) * RTTVAR + β * (|RTT - SRTT|)
+</code></pre>
+<p>β 建议值为 0.25。这个值是这个算法中出彩的地方，也就是说，它记录了最新的 RTT 与当前 SRTT 之间的差值，给我们在后续感知到 RTT 的变化提供了抓手。</p>
+<p><strong>第三步</strong>: 计算最终的RTO:</p>
+<pre><code>RTO = µ * SRTT + ∂ * RTTVAR
+</code></pre>
+<p>µ建议值取1, ∂建议值取4。</p>
+<p>这个公式在 SRTT 的基础上加上了最新 RTT 与它的偏移，从而很好的感知了 RTT 的变化，这种算法下，RTO 与 RTT 变化的差值关系更加密切。</p>
+<h2 id="009-能不能说一说-TCP-的流量控制？"><a href="#009-能不能说一说-TCP-的流量控制？" class="headerlink" title="009: 能不能说一说 TCP 的流量控制？"></a>009: 能不能说一说 TCP 的流量控制？</h2><p>对于发送端和接收端而言，TCP 需要把发送的数据放到<strong>发送缓存区</strong>, 将接收的数据放到<strong>接收缓存区</strong>。</p>
+<p>而流量控制索要做的事情，就是在通过接收缓存区的大小，控制发送端的发送。如果对方的接收缓存区满了，就不能再继续发送了。</p>
+<p>要具体理解流量控制，首先需要了解滑动窗口的概念。</p>
+<h3 id="TCP-滑动窗口"><a href="#TCP-滑动窗口" class="headerlink" title="TCP 滑动窗口"></a>TCP 滑动窗口</h3><p>TCP 滑动窗口分为两种: <strong>发送窗口</strong>和<strong>接收窗口</strong>。</p>
+<h3 id="发送窗口"><a href="#发送窗口" class="headerlink" title="发送窗口"></a>发送窗口</h3><p>发送端的滑动窗口结构如下:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-3cd9e36dfbad543a00dba1a430708af5_1440w.jpg"></p>
+<p>其中包含四大部分: - 已发送且已确认 - 已发送但未确认 - 未发送但可以发送 - 未发送也不可以发送</p>
+<p>其中有一些重要的概念，我标注在图中:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-694b4932025a64c2ba9ca0a02c8810ce_1440w.jpg"></p>
+<p>发送窗口就是图中被框住的范围。SND 即send, WND 即window, UNA 即unacknowledged, 表示未被确认，NXT 即next, 表示下一个发送的位置。</p>
+<h3 id="接收窗口"><a href="#接收窗口" class="headerlink" title="接收窗口"></a>接收窗口</h3><p>接收端的窗口结构如下:</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-eb29637c332d0920aacf383107930215_1440w.jpg"></p>
+<p>REV 即 receive，NXT 表示下一个接收的位置，WND 表示接收窗口大小。</p>
+<h3 id="流量控制过程"><a href="#流量控制过程" class="headerlink" title="流量控制过程"></a>流量控制过程</h3><p>这里我们不用太复杂的例子，以一个最简单的来回来模拟一下流量控制的过程，方便大家理解。</p>
+<p>首先双方三次握手，初始化各自的窗口大小，均为 200 个字节。</p>
+<p>假如当前发送端给接收端发送 100 个字节，那么此时对于发送端而言，SND.NXT 当然要右移 100 个字节，也就是说当前的可用窗口减少了 100 个字节，这很好理解。</p>
+<p>现在这 100 个到达了接收端，被放到接收端的缓冲队列中。不过此时由于大量负载的原因，接收端处理不了这么多字节，只能处理 40 个字节，剩下的 60 个字节被留在了缓冲队列中。</p>
+<p>注意了，此时接收端的情况是处理能力不够用啦，你发送端给我少发点，所以此时接收端的接收窗口应该缩小，具体来说，缩小 60 个字节，由 200 个字节变成了 140 字节，因为缓冲队列还有 60 个字节没被应用拿走。</p>
+<p>因此，接收端会在 ACK 的报文首部带上缩小后的滑动窗口 140 字节，发送端对应地调整发送窗口的大小为 140 个字节。</p>
+<p>此时对于发送端而言，已经发送且确认的部分增加 40 字节，也就是 SND.UNA 右移 40 个字节，同时<strong>发送窗口</strong>缩小为 140 个字节。</p>
+<p>这也就是<strong>流量控制</strong>的过程。尽管回合再多，整个控制的过程和原理是一样的。</p>
+<h2 id="010-能不能说说-TCP-的拥塞控制？"><a href="#010-能不能说说-TCP-的拥塞控制？" class="headerlink" title="010: 能不能说说 TCP 的拥塞控制？"></a>010: 能不能说说 TCP 的拥塞控制？</h2><p>上一节所说的<strong>流量控制</strong>发生在发送端跟接收端之间，并没有考虑到整个网络环境的影响，如果说当前网络特别差，特别容易丢包，那么发送端就应该注意一些了。而这，也正是拥塞控制需要处理的问题。</p>
+<p>对于拥塞控制来说，TCP 每条连接都需要维护两个核心状态: - 拥塞窗口（Congestion Window，cwnd） - 慢启动阈值（Slow Start Threshold，ssthresh）</p>
+<p>涉及到的算法有这几个: - 慢启动 - 拥塞避免 - 快速重传和快速恢复</p>
+<p>接下来，我们就来一一拆解这些状态和算法。首先，从拥塞窗口说起。</p>
+<h3 id="拥塞窗口"><a href="#拥塞窗口" class="headerlink" title="拥塞窗口"></a>拥塞窗口</h3><p>拥塞窗口（Congestion Window，cwnd）是指目前自己还能传输的数据量大小。</p>
+<p>那么之前介绍了接收窗口的概念，两者有什么区别呢？ - 接收窗口(rwnd)是接收端给的限制 - 拥塞窗口(cwnd)是发送端的限制</p>
+<p>限制谁呢？</p>
+<p>限制的是发送窗口的大小。</p>
+<p>有了这两个窗口，如何来计算发送窗口？</p>
+<pre><code>发送窗口大小 = min(rwnd, cwnd)
+</code></pre>
+<p>取两者的较小值。而拥塞控制，就是来控制cwnd的变化。</p>
+<h3 id="慢启动"><a href="#慢启动" class="headerlink" title="慢启动"></a>慢启动</h3><p>刚开始进入传输数据的时候，你是不知道现在的网路到底是稳定还是拥堵的，如果做的太激进，发包太急，那么疯狂丢包，造成雪崩式的网络灾难。</p>
+<p>因此，拥塞控制首先就是要采用一种保守的算法来慢慢地适应整个网路，这种算法叫慢启动。运作过程如下:</p>
+<ul>
+<li>首先，三次握手，双方宣告自己的接收窗口大小</li>
+<li>双方初始化自己的<strong>拥塞窗口</strong>(cwnd)大小</li>
+<li>在开始传输的一段时间，发送端每收到一个 ACK，拥塞窗口大小加 1，也就是说，每经过一个 RTT，cwnd 翻倍。如果说初始窗口为 10，那么第一轮 10 个报文传完且发送端收到 ACK 后，cwnd 变为 20，第二轮变为 40，第三轮变为 80，依次类推。</li>
+</ul>
+<p>难道就这么无止境地翻倍下去？当然不可能。它的阈值叫做<strong>慢启动阈值</strong>，当 cwnd 到达这个阈值之后，好比踩了下刹车，别涨了那么快了，老铁，先 hold 住！</p>
+<p>在到达阈值后，如何来控制 cwnd 的大小呢？</p>
+<p>这就是拥塞避免做的事情了。</p>
+<h3 id="拥塞避免"><a href="#拥塞避免" class="headerlink" title="拥塞避免"></a>拥塞避免</h3><p>原来每收到一个 ACK，cwnd 加1，现在到达阈值了，cwnd 只能加这么一点: <strong>1 &#x2F; cwnd</strong>。那你仔细算算，一轮 RTT 下来，收到 cwnd 个 ACK, 那最后拥塞窗口的大小 cwnd 总共才增加 1。</p>
+<p>也就是说，以前一个 RTT 下来，cwnd翻倍，现在cwnd只是增加 1 而已。</p>
+<p>当然，<strong>慢启动</strong>和<strong>拥塞避免</strong>是一起作用的，是一体的。</p>
+<h3 id="快速重传和快速恢复"><a href="#快速重传和快速恢复" class="headerlink" title="快速重传和快速恢复"></a>快速重传和快速恢复</h3><h3 id="快速重传"><a href="#快速重传" class="headerlink" title="快速重传"></a>快速重传</h3><p>在 TCP 传输的过程中，如果发生了丢包，即接收端发现数据段不是按序到达的时候，接收端的处理是重复发送之前的 ACK。</p>
+<p>比如第 5 个包丢了，即使第 6、7 个包到达的接收端，接收端也一律返回第 4 个包的 ACK。当发送端收到 3 个重复的 ACK 时，意识到丢包了，于是马上进行重传，不用等到一个 RTO 的时间到了才重传。</p>
+<p>这就是<strong>快速重传</strong>，它解决的是<strong>是否需要重传</strong>的问题。</p>
+<h3 id="选择性重传"><a href="#选择性重传" class="headerlink" title="选择性重传"></a>选择性重传</h3><p>那你可能会问了，既然要重传，那么只重传第 5 个包还是第5、6、7 个包都重传呢？</p>
+<p>当然第 6、7 个都已经到达了，TCP 的设计者也不傻，已经传过去干嘛还要传？干脆记录一下哪些包到了，哪些没到，针对性地重传。</p>
+<p>在收到发送端的报文后，接收端回复一个 ACK 报文，那么在这个报文首部的可选项中，就可以加上SACK这个属性，通过left edge和right edge告知发送端已经收到了哪些区间的数据报。因此，即使第 5 个包丢包了，当收到第 6、7 个包之后，接收端依然会告诉发送端，这两个包到了。剩下第 5 个包没到，就重传这个包。这个过程也叫做<strong>选择性重传(SACK，Selective Acknowledgment)<strong>，它解决的是</strong>如何重传</strong>的问题。</p>
+<h3 id="快速恢复"><a href="#快速恢复" class="headerlink" title="快速恢复"></a>快速恢复</h3><p>当然，发送端收到三次重复 ACK 之后，发现丢包，觉得现在的网络已经有些拥塞了，自己会进入<strong>快速恢复</strong>阶段。</p>
+<p>在这个阶段，发送端如下改变： - 拥塞阈值降低为 cwnd 的一半 - cwnd 的大小变为拥塞阈值 - cwnd 线性增加</p>
+<p>以上就是 TCP 拥塞控制的经典算法: <strong>慢启动</strong>、<strong>拥塞避免</strong>、<strong>快速重传和快速恢复</strong>。</p>
+<h2 id="011-能不能说说-Nagle-算法和延迟确认？"><a href="#011-能不能说说-Nagle-算法和延迟确认？" class="headerlink" title="011: 能不能说说 Nagle 算法和延迟确认？"></a>011: 能不能说说 Nagle 算法和延迟确认？</h2><h3 id="Nagle-算法"><a href="#Nagle-算法" class="headerlink" title="Nagle 算法"></a>Nagle 算法</h3><p>试想一个场景，发送端不停地给接收端发很小的包，一次只发 1 个字节，那么发 1 千个字节需要发 1000 次。这种频繁的发送是存在问题的，不光是传输的时延消耗，发送和确认本身也是需要耗时的，频繁的发送接收带来了巨大的时延。</p>
+<p>而避免小包的频繁发送，这就是 Nagle 算法要做的事情。</p>
+<p>具体来说，Nagle 算法的规则如下: - 当第一次发送数据时不用等待，就算是 1byte 的小包也立即发送 - 后面发送满足下面条件之一就可以发了: - 数据包大小达到最大段大小(Max Segment Size, 即 MSS) - 之前所有包的 ACK 都已接收到</p>
+<h3 id="延迟确认"><a href="#延迟确认" class="headerlink" title="延迟确认"></a>延迟确认</h3><p>试想这样一个场景，当我收到了发送端的一个包，然后在极短的时间内又接收到了第二个包，那我是一个个地回复，还是稍微等一下，把两个包的 ACK 合并后一起回复呢？</p>
+<p><strong>延迟确认</strong>(delayed ack)所做的事情，就是后者，稍稍延迟，然后合并 ACK，最后才回复给发送端。TCP 要求这个延迟的时延必须小于500ms，一般操作系统实现都不会超过200ms。</p>
+<p>不过需要主要的是，有一些场景是不能延迟确认的，收到了就要马上回复: - 接收到了大于一个 frame 的报文，且需要调整窗口大小 - TCP 处于 quickack 模式（通过tcp_in_quickack_mode设置） - 发现了乱序包</p>
+<h3 id="两者一起使用会怎样？"><a href="#两者一起使用会怎样？" class="headerlink" title="两者一起使用会怎样？"></a>两者一起使用会怎样？</h3><p>前者意味着延迟发，后者意味着延迟接收，会造成更大的延迟，产生性能问题。</p>
+<h2 id="012-如何理解-TCP-的-keep-alive？"><a href="#012-如何理解-TCP-的-keep-alive？" class="headerlink" title="012. 如何理解 TCP 的 keep-alive？"></a>012. 如何理解 TCP 的 keep-alive？</h2><p>大家都听说过 http 的keep-alive, 不过 TCP 层面也是有keep-alive机制，而且跟应用层不太一样。</p>
+<p>试想一个场景，当有一方因为网络故障或者宕机导致连接失效，由于 TCP 并不是一个轮询的协议，在下一个数据包到达之前，对端对连接失效的情况是一无所知的。</p>
+<p>这个时候就出现了 keep-alive, 它的作用就是探测对端的连接有没有失效。</p>
+<p>在 Linux 下，可以这样查看相关的配置:</p>
+<pre><code>sudo sysctl -a | grep keepalive
+
+// 每隔 7200 s 检测一次
+net.ipv4.tcp_keepalive_time = 7200
+// 一次最多重传 9 个包
+net.ipv4.tcp_keepalive_probes = 9
+// 每个包的间隔重传间隔 75 s
+net.ipv4.tcp_keepalive_intvl = 75
+</code></pre>
+<p>不过，现状是大部分的应用并没有默认开启 TCP 的keep-alive选项，为什么？</p>
+<p>站在应用的角度: - 7200s 也就是两个小时检测一次，时间太长 - 时间再短一些，也难以体现其设计的初衷, 即检测长时间的死连接</p>
+<p>因此是一个比较尴尬的设计。</p>
+<h2 id="最后"><a href="#最后" class="headerlink" title="最后"></a>最后</h2><p>文章首发于<a href="https://link.zhihu.com/?target=https://github.com/sanyuan0704/my_blog">我的博客</a>，如果觉得对你有帮助的话，希望能帮忙点一个 star，非常感谢~</p>
+<p>下期预告: HTTP 协议</p>
+<p><img data-src="/../images/pic/tcp-protocol/v2-75c7d8a762c96f02e683e9dc11349ecd_1440w.jpg"></p>
+<p>参考资料:</p>
+<p><a href="https://link.zhihu.com/?target=https://time.geekbang.org/course/intro/175">《web协议详解与抓包实战——陶辉》</a></p>
+<p><a href="https://link.zhihu.com/?target=https://time.geekbang.org/column/article/0?cid=85">《趣谈网络协议》——刘超</a></p>
+<p><a href="https://link.zhihu.com/?target=https://juejin.im/book/5c70dbbe51882562046911bc">掘金小册《深入理解 TCP 协议: 从原理到实战》</a></p>
+<p><a href="https://link.zhihu.com/?target=https://queue.acm.org/detail.cfm?id=3022184">关于 BBR 拥塞控制算法论文</a></p>
+]]></content>
+      <categories>
+        <category>计算机网络</category>
+      </categories>
+      <tags>
+        <tag>TCP/IP</tag>
+        <tag>网络</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>mysql如何保证数据不丢的</title>
+    <url>/mysql-ensure-not-lost-data.html</url>
+    <content><![CDATA[<p>进入正题前先简单看看MySQL的逻辑架构，相信我用的着。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/7bb7737dbcbe452081b4976ae2b3df32.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom:70%;" />
+
+<span id="more"></span>
+
+<p>MySQL逻辑架构</p>
+<p>MySQL的逻辑架构大致可以分为三层：</p>
+<ul>
+<li>第一层：处理客户端连接、授权认证，安全校验等。</li>
+<li>第二层：服务器server层，负责对SQL解释、分析、优化、执行操作引擎等。</li>
+<li>第三层：存储引擎，负责MySQL中数据的存储和提取。</li>
+</ul>
+<blockquote>
+<p>我们要知道MySQL的服务器层是不管理事务的，事务是由存储引擎实现的，而MySQL中支持事务的存储引擎又属InnoDB使用的最为广泛，所以后续文中提到的存储引擎都以InnoDB为主。</p>
+</blockquote>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/138efdd7e78447a7935df4ec70788431.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 73%;" />
+
+<p>MySQL数据更新流程</p>
+<p><strong>记住！</strong> <strong>记住！</strong> <strong>记住！</strong> 上边这张图，她是MySQL更新数据的基础流程，其中包括redo log、bin log、undo log三种日志间的大致关系，好了闲话少说直奔主题。</p>
+<h1 id="redo-log（重做日志）"><a href="#redo-log（重做日志）" class="headerlink" title="redo log（重做日志）"></a><strong>redo log（重做日志）</strong></h1><p>redo log属于MySQL存储引擎InnoDB的事务日志。</p>
+<p>MySQL的数据是存放在磁盘中的，每次读写数据都需做磁盘IO操作，如果并发场景下性能就会很差。为此MySQL提供了一个优化手段，引入缓存Buffer Pool。这个缓存中包含了磁盘中<strong>部分</strong>数据页（page）的映射，以此来缓解数据库的磁盘压力。</p>
+<p>当从数据库读数据时，首先从缓存中读取，如果缓存中没有，则从磁盘读取后放入缓存；当向数据库写入数据时，先向缓存写入，此时缓存中的数据页数据变更，这个数据页称为<strong>脏页</strong>，Buffer Pool中修改完数据后会按照设定的更新策略，定期刷到磁盘中，这个过程称为<strong>刷脏页</strong>。</p>
+<h1 id="MySQL宕机"><a href="#MySQL宕机" class="headerlink" title="MySQL宕机"></a><strong>MySQL宕机</strong></h1><p>如果刷脏页还未完成，可MySQL由于某些原因宕机重启，此时Buffer Pool中修改的数据还没有及时的刷到磁盘中，就会导致数据丢失，无法保证事务的持久性。</p>
+<p>为了解决这个问题引入了redo log，redo Log如其名侧重于重做！它记录的是数据库中每个页的修改，而不是某一行或某几行修改成怎样，可以用来恢复提交后的物理数据页，且只能恢复到最后一次提交的位置。</p>
+<p>redo log用到了WAL（Write-Ahead Logging）技术，这个技术的核心就在于修改记录前，一定要先写日志，并保证日志先落盘，才能算事务提交完成。</p>
+<p>有了redo log再修改数据时，InnoDB引擎会把更新记录先写在redo log中，在修改Buffer Pool中的数据，当提交事务时，调用fsync把redo log刷入磁盘。至于缓存中更新的数据文件何时刷入磁盘，则由后台线程异步处理。</p>
+<blockquote>
+<p><strong>注意</strong>：此时redo log的事务状态是prepare，还未真正提交成功，要等bin log日志写入磁盘完成才会变更为commit，事务才算真正提交完成。</p>
+</blockquote>
+<p>这样一来即使刷脏页之前MySQL意外宕机也没关系，只要在重启时解析redo log中的更改记录进行重放，重新刷盘即可。</p>
+<h1 id="大小固定"><a href="#大小固定" class="headerlink" title="大小固定"></a><strong>大小固定</strong></h1><p>redo log采用固定大小，循环写入的格式，当redo log写满之后，重新从头开始如此循环写，形成一个环状。</p>
+<p>那为什么要如此设计呢？</p>
+<p>因为redo log记录的是数据页上的修改，如果Buffer Pool中数据页已经刷磁盘后，那这些记录就失效了，新日志会将这些失效的记录进行覆盖擦除。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/dfd78e4387ba4aeba9f6240282229f6d.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 30%;" />
+
+<p>上图中的write pos表示redo log当前记录的日志序列号LSN(log sequence number)，写入还未刷盘，循环往后递增；check point表示redo log中的修改记录已刷入磁盘后的LSN，循环往后递增，这个LSN之前的数据已经全落盘。</p>
+<p>write pos到check point之间的部分是redo log空余的部分（绿色），用来记录新的日志；check point到write pos之间是redo log已经记录的数据页修改数据，此时数据页还未刷回磁盘的部分。当write pos追上check point时，会先推动check point向前移动，空出位置（刷盘）再记录新的日志。</p>
+<blockquote>
+<p><strong>注意</strong>：redo log日志满了，在擦除之前，需要确保这些要被擦除记录对应在内存中的数据页都已经刷到磁盘中了。擦除旧记录腾出新空间这段期间，是不能再接收新的更新请求的，此刻MySQL的性能会下降。所以在并发量大的情况下，合理调整redo log的文件大小非常重要。</p>
+</blockquote>
+<h1 id="crash-safe"><a href="#crash-safe" class="headerlink" title="crash-safe"></a><strong>crash-safe</strong></h1><p>因为redo log的存在使得Innodb引擎具有了crash-safe的能力，即MySQL宕机重启，系统会自动去检查redo log，将修改还未写入磁盘的数据从redo log恢复到MySQL中。</p>
+<p>MySQL启动时，不管上次是正常关闭还是异常关闭，总是会进行恢复操作。会先检查数据页中的LSN，如果这个 LSN 小于 redo log 中的LSN，即write pos位置，说明在redo log上记录着数据页上尚未完成的操作，接着就会从最近的一个check point出发，开始同步数据。</p>
+<p>简单理解，比如：redo log的LSN是500，数据页的LSN是300，表明重启前有部分数据未完全刷入到磁盘中，那么系统则将redo log中LSN序号300到500的记录进行重放刷盘。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/ab81e2fbe8ea4ef98e39c82403fa0a5b.jpeg" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom:40%;" />
+
+<h1 id="undo-log（回滚日志）"><a href="#undo-log（回滚日志）" class="headerlink" title="undo log（回滚日志）"></a><strong>undo log（回滚日志）</strong></h1><p>undo log也是属于MySQL存储引擎InnoDB的事务日志。</p>
+<p>undo log属于逻辑日志，如其名主要起到回滚的作用，它是保证事务原子性的关键。记录的是数据修改前的状态，在数据修改的流程中，同时会记录一条与当前操作相反的逻辑日志到undo log中。</p>
+<p>我们举个栗子：假如更新ID&#x3D;1记录的name字段，name原始数据为小富，现改name为程序员内点事</p>
+<p>事务执行update X set name &#x3D; 程序员内点事 where id &#x3D;1语句时，先会在undo log中记录一条相反逻辑的update X set name &#x3D; 小富 where id &#x3D;1记录，这样当某些原因导致服务异常事务失败，就可以借助undo log将数据回滚到事务执行前的状态，保证事务的完整性。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/b2787160513b434f85d47c7cd904d8f9.jpeg" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 40%;" />
+
+<p>那可能有人会问：同一个事物内的一条记录被多次修改，那是不是每次都要把数据修改前的状态都写入undo log呢？</p>
+<p>答案是不会的！</p>
+<p>undo log只负责记录事务开始前要修改数据的原始版本，当我们再次对这行数据进行修改，所产生的修改记录会写入到redo log，undo log负责完成回滚，redo log负责完成前滚。</p>
+<h1 id="回滚"><a href="#回滚" class="headerlink" title="回滚"></a><strong>回滚</strong></h1><p>未提交的事务，即事务未执行commit。但该事务内修改的脏页中，可能有一部分脏块已经刷盘。如果此时数据库实例宕机重启，就需要用回滚来将先前那部分已经刷盘的脏块从磁盘上撤销。</p>
+<h1 id="前滚"><a href="#前滚" class="headerlink" title="前滚"></a><strong>前滚</strong></h1><p>未完全提交的事务，即事务已经执行commit，但该事务内修改的脏页中只有一部分数据被刷盘，另外一部分还在buffer pool缓存上，如果此时数据库实例宕机重启，就需要用前滚来完成未完全提交的事务。将先前那部分由于宕机在内存上的未来得及刷盘数据，从redo log中恢复出来并刷入磁盘。</p>
+<blockquote>
+<p>数据库实例恢复时，先做前滚，后做回滚。</p>
+</blockquote>
+<p>如果你仔细看过了上边的 MySQL数据更新流程图 就会发现，undo log、redo log、bin log三种日志都是在刷脏页之前就已经刷到磁盘了的，相互协作最大限度保证了用户提交的数据不丢失。</p>
+<h1 id="bin-log（归档日志）"><a href="#bin-log（归档日志）" class="headerlink" title="bin log（归档日志）"></a><strong>bin log（归档日志）</strong></h1><p>bin log是一种数据库Server层（和什么引擎无关），以二进制形式存储在磁盘中的逻辑日志。bin log记录了数据库所有DDL和DML操作（不包含SELECT 和 SHOW等命令，因为这类操作对数据本身并没有修改）。</p>
+<p>默认情况下，二进制日志功能是关闭的。可以通过以下命令查看二进制日志是否开启：</p>
+<pre><code>mysql&gt; SHOW VARIABLES LIKE &#39;log_bin&#39;;
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| log_bin       | OFF   |
++---------------+-------+
+</code></pre>
+<p>bin log也被叫做归档日志，因为它不会像redo log那样循环写擦除之前的记录，而是会一直记录日志。一个bin log日志文件默认最大容量1G（也可以通过max_binlog_size参数修改），单个日志超过最大值，则会新创建一个文件继续写。</p>
+<pre><code>mysql&gt; show binary logs;
++-----------------+-----------+
+| Log_name        | File_size |
++-----------------+-----------+
+| mysq-bin.000001 |      8687 |
+| mysq-bin.000002 |      1445 |
+| mysq-bin.000003 |      3966 |
+| mysq-bin.000004 |       177 |
+| mysq-bin.000005 |      6405 |
+| mysq-bin.000006 |       177 |
+</code></pre>
+<p>bin log日志的内容格式其实就是执行SQL命令的反向逻辑，这点和undo log有点类似。一般来说开启bin log都会给日志文件设置过期时间（expire_logs_days参数，默认永久保存），要不然日志的体量会非常庞大。</p>
+<pre><code>mysql&gt; show variables like &#39;expire_logs_days&#39;;
++------------------+-------+
+| Variable_name    | Value |
++------------------+-------+
+| expire_logs_days | 0     |
++------------------+-------+
+1 row in set
+
+mysql&gt; SET GLOBAL expire_logs_days=30;
+Query OK, 0 rows affected
+</code></pre>
+<p>bin log主要应用于MySQL主从模式（master-slave）中，主从节点间的数据同步；以及基于时间点的数据还原。</p>
+<h1 id="主从同步"><a href="#主从同步" class="headerlink" title="主从同步"></a><strong>主从同步</strong></h1><p>通过下图MySQL的主从复制过程，来了解下bin log在主从模式下的应用。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/1cd6490808fd4d26ba89179d9268cf18.jpeg" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 45%;" />
+
+<ul>
+<li>用户在主库master执行DDL和DML操作，修改记录顺序写入bin log;</li>
+<li>从库slave的I&#x2F;O线程连接上Master，并请求读取指定位置position的日志内容;</li>
+<li>Master收到从库slave请求后，将指定位置position之后的日志内容，和主库bin log文件的名称以及在日志中的位置推送给从库;</li>
+<li>slave的I&#x2F;O线程接收到数据后，将接收到的日志内容依次写入到relay log文件最末端，并将读取到的主库bin log文件名和位置position记录到master-info文件中，以便在下一次读取用;</li>
+<li>slave的SQL线程检测到relay log中内容更新后，读取日志并解析成可执行的SQL语句，这样就实现了主从库的数据一致;</li>
+</ul>
+<h1 id="基于时间点还原"><a href="#基于时间点还原" class="headerlink" title="基于时间点还原"></a><strong>基于时间点还原</strong></h1><p>我们看到bin log也可以做数据的恢复，而redo log也可以，那它们有什么区别？</p>
+<ul>
+<li>层次不同：redo log 是InnoDB存储引擎实现的，bin log 是MySQL的服务器层实现的，但MySQL数据库中的任何存储引擎对于数据库的更改都会产生bin log。</li>
+<li>作用不同：redo log 用于碰撞恢复（crash recovery），保证MySQL宕机也不会影响持久性；bin log 用于时间点恢复（point-in-time recovery），保证服务器可以基于时间点恢复数据和主从复制。</li>
+<li>内容不同：redo log 是物理日志，内容基于磁盘的页Page；bin log的内容是二进制，可以根据binlog_format参数自行设置。</li>
+<li>写入方式不同：redo log 采用循环写的方式记录；binlog 通过追加的方式记录，当文件大小大于给定值后，后续的日志会记录到新的文件上。</li>
+<li>刷盘时机不同：bin log在事务提交时写入；redo log 在事务开始时即开始写入。</li>
+</ul>
+<p>bin log 与 redo log 功能并不冲突而是起到相辅相成的作用，需要二者同时记录，才能保证当数据库发生宕机重启时，数据不会丢失。</p>
+<h1 id="relay-log（中继日志）"><a href="#relay-log（中继日志）" class="headerlink" title="relay log（中继日志）"></a><strong>relay log（中继日志）</strong></h1><p>relay log日志文件具有与bin log日志文件相同的格式，从上边MySQL主从复制的流程可以看出，relay log起到一个中转的作用，slave先从主库master读取二进制日志数据，写入从库本地，后续再异步由SQL线程读取解析relay log为对应的SQL命令执行。</p>
+<h1 id="slow-query-log"><a href="#slow-query-log" class="headerlink" title="slow query log"></a><strong>slow query log</strong></h1><p>慢查询日志（slow query log）: 用来记录在 MySQL 中执行时间超过指定时间的查询语句，在 SQL 优化过程中会经常使用到。通过慢查询日志，我们可以查找出哪些查询语句的执行效率低，耗时严重。</p>
+<p>出于性能方面的考虑，一般只有在排查慢SQL、调试参数时才会开启，默认情况下，慢查询日志功能是关闭的。可以通过以下命令查看是否开启慢查询日志：</p>
+<pre><code>mysql&gt; SHOW VARIABLES LIKE &#39;slow_query%&#39;;
++---------------------+--------------------------------------------------------+
+| Variable_name       | Value                                                  |
++---------------------+--------------------------------------------------------+
+| slow_query_log      | OFF                                                    |
+| slow_query_log_file | /usr/local/mysql/data/iZ2zebfzaequ90bdlz820sZ-slow.log |
++---------------------+--------------------------------------------------------+
+</code></pre>
+<p>通过如下命令开启慢查询日志后，我发现 iZ2zebfzaequ90bdlz820sZ-slow.log 日志文件里并没有内容啊，可能因为我执行的 SQL 都比较简单没有超过指定时间。</p>
+<pre><code>mysql&gt;  SET GLOBAL slow_query_log=ON;
+Query OK, 0 rows affected
+</code></pre>
+<p>上边提到超过 指定时间 的查询语句才算是慢查询，那么这个时间阈值又是多少嘞？我们通过 long_query_time 参数来查看一下，发现默认是 10 秒。</p>
+<pre><code>mysql&gt; SHOW VARIABLES LIKE &#39;long_query_time&#39;;
++-----------------+-----------+
+| Variable_name   | Value     |
++-----------------+-----------+
+| long_query_time | 10.000000 |
++-----------------+-----------+
+</code></pre>
+<p>这里我们将 long_query_time 参数改小为 0.001秒再次执行查询SQL，看看慢查询日志里是否有变化。</p>
+<pre><code>mysql&gt; SET GLOBAL long_query_time=0.001;
+Query OK, 0 rows affected
+</code></pre>
+<p>果然再执行 SQL 的时，执行时间大于 0.001秒，发现慢查询日志开始记录了。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/6c8f3c40ae2446409caf05d4a329d0a4.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom:67%;" />
+
+<p>慢查询日志</p>
+<h1 id="general-query-log"><a href="#general-query-log" class="headerlink" title="general query log"></a><strong>general query log</strong></h1><p>一般查询日志（general query log）：用来记录用户的<strong>所有</strong>操作，包括客户端何时连接了服务器、客户端发送的所有SQL以及其他事件，比如MySQL 服务启动和关闭等等。MySQL服务器会按照它接收到语句的先后顺序写入日志文件。</p>
+<p>由于一般查询日志记录的内容过于详细，开启后 Log 文件的体量会非常庞大，所以出于对性能的考虑，默认情况下，该日志功能是关闭的，通常会在排查故障需获得详细日志的时候才会临时开启。</p>
+<p>我们可以通过以下命令查看一般查询日志是否开启，命令如下：</p>
+<pre><code>mysql&gt; show variables like &#39;general_log&#39;;
++---------------+-------+
+| Variable_name | Value |
++---------------+-------+
+| general_log   | OFF   |
++---------------+-------+
+</code></pre>
+<p>下边开启一般查询日志并查看日志存放的位置。</p>
+<pre><code>mysql&gt; SET GLOBAL general_log=on;
+Query OK, 0 rows affected
+
+
+mysql&gt; show variables like &#39;general_log_file&#39;;
++------------------+---------------------------------------------------+
+| Variable_name    | Value                                             |
++------------------+---------------------------------------------------+
+| general_log_file | /usr/local/mysql/data/iZ2zebfzaequ90bdlz820sZ.log |
++------------------+---------------------------------------------------+
+</code></pre>
+<p>执行一条查询 SQL 看看日志内容的变化。</p>
+<pre><code>mysql&gt; select * from t_config;
++---------------------+------------+---------------------+---------------------+
+| id                  | remark     | create_time         | last_modify_time    |
++---------------------+------------+---------------------+---------------------+
+| 1325741604307734530 | 我是广播表 | 2020-11-09 18:06:44 | 2020-11-09 18:06:44 |
++---------------------+------------+---------------------+---------------------+
+</code></pre>
+<p>​    </p>
+<p>我们看到日志内容详细的记录了所有执行的命令、SQL、SQL的解析过程、数据库设置等等。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/ea6269daf2db4979a5562da317c004f3.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 60%;" />
+
+<p>一般查询日志</p>
+<h1 id="error-log"><a href="#error-log" class="headerlink" title="error log"></a><strong>error log</strong></h1><p>错误日志（error log）: 应该是 MySQL 中最好理解的一种日志，主要记录 MySQL 服务器每次启动和停止的时间以及诊断和出错信息。</p>
+<p>默认情况下，该日志功能是开启的，通过如下命令查找错误日志文件的存放路径。</p>
+<pre><code>mysql&gt; SHOW VARIABLES LIKE &#39;log_error&#39;;
++---------------+----------------------------------------------------------------+
+| Variable_name | Value                                                          |
++---------------+----------------------------------------------------------------+
+| log_error     | /usr/local/mysql/data/LAPTOP-UHQ6V8KP.err |
++---------------+----------------------------------------------------------------+
+</code></pre>
+<p><strong>注意</strong>：错误日志中记录的可并非全是错误信息，像 MySQL 如何启动InnoDB 的表空间文件、如何初始化自己的存储引擎，初始化 buffer pool等等，这些也记录在错误日志文件中。</p>
+<img data-src="../images/pic/mysql-ensure-not-lost-data/d1f40e6e39164d4c87cb20a361f5c8e9.png" alt="面试官：MySQL是如何保证不丢数据的？" style="zoom: 65%;" />
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a><strong>总结</strong></h1><p>MySQL作为我们工作中最常接触的中间件，熟练使用只算是入门，如果要在简历写上一笔精通，还需要深入了解其内部工作原理，而这7种日志也只是深入学习过程中的一个起点，学无止境，兄嘚干就完了！</p>
+]]></content>
+      <categories>
+        <category>Mysql</category>
+      </categories>
+      <tags>
+        <tag>原理</tag>
+        <tag>mysql</tag>
+        <tag>日志</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>mysql的redo和undo-log</title>
+    <url>/mysql-redo-undo-log.html</url>
+    <content><![CDATA[<h1 id="redo日志"><a href="#redo日志" class="headerlink" title="redo日志"></a>redo日志</h1><h2 id="redo-日志格式"><a href="#redo-日志格式" class="headerlink" title="redo 日志格式"></a>redo 日志格式</h2><p> redo 日志本质上只是记录了一下事务对数据库做了哪些修改</p>
+<span id="more"></span>
+
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220309190612213.png" alt="image-20220309190612213" style="zoom:25%;" />
+
+<p>各个部分的详细释义如下:</p>
+<ul>
+<li><p>type :该条 redo 日志的类型。在 MySQL 5.7.21 这个版本中，设计 InnoDB 的大叔一共为 redo 日志设计了53种不同的类型，稍后会详细介 绍不同类型的 redo 日志。</p>
+</li>
+<li><p>space ID :表空间ID。</p>
+</li>
+<li><p>page number :页号。</p>
+</li>
+<li><p>data :该条 redo 日志的具体内容。</p>
+</li>
+</ul>
+<h2 id="redo-日志类型"><a href="#redo-日志类型" class="headerlink" title="redo 日志类型"></a>redo 日志类型</h2><ul>
+<li>MLOG_1BYTE ( type 字段对应的十进制数字为 1 ):表示在页面的某个偏移量处写入1个字节的 redo 日志 类型。</li>
+<li>MLOG_2BYTE ( type 字段对应的十进制数字为 2 ):表示在页面的某个偏移量处写入2个字节的 redo 日志 类型。</li>
+<li>MLOG_4BYTE ( type 字段对应的十进制数字为 4 ):表示在页面的某个偏移量处写入4个字节的 redo 日志 类型。</li>
+<li>MLOG_8BYTE ( type 字段对应的十进制数字为 8 ):表示在页面的某个偏移量处写入8个字节的 redo 日志 类型。</li>
+<li>MLOG_WRITE_STRING ( type 字段对应的十进制数字为 30 ):表示在页面的某个偏移量处写入一串数据。</li>
+</ul>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310110823090.png" alt="image-20220310110823090" style="zoom:25%;" />
+
+<p>其余 MLOG_1BYTE 、 MLOG_2BYTE 、 MLOG_4BYTE 类型的 redo 日志结构和 MLOG_8BYTE 的类似，只不过具体数据 中包含对应个字节的数据罢了。 MLOG_WRITE_STRING 类型的 redo 日志表示写入一串数据，但是因为不能确定写 入的具体数据占用多少字节，所以需要在日志结构中添加一个 len 字段:</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310110910051.png" alt="image-20220310110910051" style="zoom:25%;" />
+
+<p>redo日志会把事务在执行过程 中对数据库所做的所有修改都记录下来，在之后系统奔溃重启后可以把事务所做的任何修改都恢复出来。</p>
+<h2 id="Mini-Transaction"><a href="#Mini-Transaction" class="headerlink" title="Mini-Transaction"></a>Mini-Transaction</h2><h2 id="以组的形式写入redo日志"><a href="#以组的形式写入redo日志" class="headerlink" title="以组的形式写入redo日志"></a>以组的形式写入<strong>redo</strong>日志</h2><p>语句在执行过程中可能修改若干个页面。比如我们前边说的一条 INSERT 语句可能修改系统表空间页号为 7 的页 面的 Max Row ID 属性(当然也可能更新别的系统页面，只不过我们没有都列举出来而已)，还会更新聚簇索引 和二级索引对应 B+ 树中的页面。由于对这些页面的更改都发生在 Buffer Pool 中，所以在修改完页面之后，需 要记录一下相应的 redo 日志。在执行语句的过程中产生的 redo 日志被设计 InnoDB 的大叔人为的划分成了若干 个不可分割的组，比如:</p>
+<ul>
+<li>更新 Max Row ID 属性时产生的 redo 日志是不可分割的。</li>
+<li>向聚簇索引对应 B+ 树的页面中插入一条记录时产生的 redo 日志是不可分割的。 </li>
+<li>向某个二级索引对应 B+ 树的页面中插入一条记录时产生的 redo 日志是不可分割的。 </li>
+<li>还有其他的一些对页面的访问操作时产生的 redo 日志是不可分割的</li>
+</ul>
+<p>规定在执行这些需要保证原子性的操作时必须以 组 的形式来记录的 redo 日志，在进行系统奔 溃重启恢复时，针对某个组中的 redo 日志，要么把全部的日志都恢复掉，要么一条也不恢复</p>
+<ul>
+<li>有的需要保证原子性的操作会生成多条 redo 日志，比如向某个索引对应的 B+ 树中进行一次悲观插入就需要 生成许多条 redo 日志。</li>
+</ul>
+<p>在该组中 的最后一条 redo 日志后边加上一条特殊类型的 redo 日志，该类型名称为 MLOG_MULTI_REC_END ， type 字 段对应的十进制数字为 31 ，该类型的 redo 日志结构很简单，只有一个 type 字段</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310114517932.png" alt="image-20220310114517932" style="zoom:25%;" />
+
+<p>所以某个需要保证原子性的操作产生的一系列 redo 日志必须要以一个类型为 MLOG_MULTI_REC_END 结尾，就 像这样:</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310114543679.png" alt="image-20220310114543679" style="zoom:25%;" />
+
+<p>这样在系统奔溃重启进行恢复时，只有当解析到类型为 MLOG_MULTI_REC_END 的 redo 日志，才认为解析到了 一组完整的 redo 日志，才会进行恢复。否则的话直接放弃前边解析到的 redo 日志。</p>
+<ul>
+<li>有的需要保证原子性的操作只生成一条 redo 日志，比如更新 Max Row ID 属性的操作就只会生成一条 redo 日志。</li>
+</ul>
+<p>其实在一条日志后边跟一个类型为 MLOG_MULTI_REC_END 的 redo 日志也是可以的，不过设计 InnoDB 的大叔 比较勤俭节约，他们不想浪费一个比特位。别忘了虽然 redo 日志的类型比较多，但撑死了也就是几十种， 是小于 127 这个数字的，也就是说我们用7个比特位就足以包括所有的 redo 日志类型，而 type 字段其实是 占用1个字节的，也就是说我们可以省出来一个比特位用来表示该需要保证原子性的操作只产生单一的一条</p>
+<p>redo 日志，示意图如下</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310114949619.png" alt="image-20220310114949619" style="zoom:25%;" />
+
+<p>如果 type 字段的第一个比特位为 1 ，代表该需要保证原子性的操作只产生了单一的一条 redo 日志，否则 表示该需要保证原子性的操作产生了一系列的 redo 日志</p>
+<h2 id="redo日志的写入过程"><a href="#redo日志的写入过程" class="headerlink" title="redo日志的写入过程"></a><strong>redo</strong>日志的写入过程</h2><p>设计 MySQL 的大叔把对底层页面中的一次原子访问的过程称之为一个 Mini-Transaction ，简称 mtr 。一个所谓的 mtr 可以包含一组 redo 日志，在进 行奔溃恢复时这一组 redo 日志作为一个不可分割的整体。</p>
+<p>一个事务可以包含若干条语句，每一条语句其实是由若干个 mtr 组成，每一个 mtr 又可以包含若干条 redo 日 志，画个图表示它们的关系就是这样</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310115137429.png" alt="image-20220310115137429" style="zoom:23%;" />
+
+
+
+<h3 id="redo-log-block"><a href="#redo-log-block" class="headerlink" title="redo log block"></a>redo log block</h3><p>通过 mtr 生成的 redo 日志都放在了大小为 512字节 的 页 中。为了区分这里把用来存储 redo 日志的页称为 block (你心里清楚页和block的意思其实差不多就行了）</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310115406269.png" alt="image-20220310115406269" style="zoom:25%;" />
+
+<p>真正的 redo 日志都是存储到占用 496 字节大小的 log block body 中，图中的 log block header 和 log block trailer 存储的是一些管理信息</p>
+<img data-src="../images/pic/mysql-redo-undo-log/image-20220310115436620.png" alt="image-20220310115436620" style="zoom:25%;" />
+
+
+
+<ul>
+<li>LOG_BLOCK_HDR_NO :每一个block都有一个大于0的唯一标号，本属性就表示该标号值。</li>
+<li>LOG_BLOCK_HDR_DATA_LEN :表示block中已经使用了多少字节，初始值为 12 (因为 log block body 从第 12个字节处开始)。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果 log block body 已经被全部写满，那么本属性的值被设置为 512 。</li>
+<li>LOG_BLOCK_FIRST_REC_GROUP :一条 redo 日志也可以称之为一条 redo 日志记录( redo log record )， 一个 mtr 会生产多条 redo 日志记录，这些 redo 日志记录被称之为一个 redo 日志记录组( redo log record group )。 LOG_BLOCK_FIRST_REC_GROUP 就代表该block中第一个 mtr 生成的 redo 日志记录组的偏 移量(其实也就是这个block里第一个 mtr 生成的第一条 redo 日志的偏移量)。</li>
+<li>LOG_BLOCK_CHECKPOINT_NO :表示所谓的 checkpoint 的序号， checkpoint 是我们后续内容的重点，现在 先不用清楚它的意思，稍安勿躁。</li>
+</ul>
+]]></content>
+      <categories>
+        <category>Mysql</category>
+      </categories>
+      <tags>
+        <tag>mysql</tag>
+        <tag>日志</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>mysql是怎么运行的-笔记</title>
+    <url>/mysql-how-it-works.html</url>
+    <content><![CDATA[<h2 id="启动MySQL服务器程序-1-3-1-UNIX里启动服务器程序"><a href="#启动MySQL服务器程序-1-3-1-UNIX里启动服务器程序" class="headerlink" title="启动MySQL服务器程序 1.3.1 UNIX里启动服务器程序"></a>启动<strong>MySQL</strong>服务器程序 <strong>1.3.1 UNIX</strong>里启动服务器程序</h2><p>在类 UNIX 系统中用来启动 MySQL 服务器程序的可执行文件有很多，大多在 MySQL 安装目录的 bin 目录下，我们 一起来瞅瞅。</p>
+<span id="more"></span>
+
+<p><strong>mysqld</strong></p>
+<p>mysqld 这个可执行文件就代表着 MySQL 服务器程序，运行这个可执行文件就可以直接启动一个服务器进程。但 这个命令不常用，我们继续往下看更牛逼的启动命令。</p>
+<p><strong>mysqld_safe</strong></p>
+<p>mysqld_safe 是一个启动脚本，它会间接的调用 mysqld ，而且还顺便启动了另外一个监控进程，这个监控进程 在服务器进程挂了的时候，可以帮助重启它。另外，使用 mysqld_safe 启动服务器程序时，它会将服务器程序的 出错信息和其他诊断信息重定向到某个文件中，产生出错日志，这样可以方便我们找出发生错误的原因。</p>
+<p><strong>mysql.server</strong></p>
+<p>mysql.server 也是一个启动脚本，它会间接的调用 mysqld_safe ，在调用 mysql.server 时在后边指定 start 参数就可以启动服务器程序了，就像这样:</p>
+<p>  mysql.server start</p>
+<p>需要注意的是，这个 <strong>mysql.server</strong> 文件其实是一个链接文件，它的实际文件是 <strong>..&#x2F;support-files&#x2F;mysql.server</strong>。 我使用的 macOS 操作系统会帮我们在 bin 目录下自动创建一个指向实际文件的链接文件，如果你的操作系统没有 帮你自动创建这个链接文件，那就自己创建一个呗~ 别告诉我你不会创建链接文件，上网搜搜呗~</p>
+<p>另外，我们还可以使用 mysql.server 命令来关闭正在运行的服务器程序，只要把 start 参数换成 stop 就好 了:</p>
+<p>  mysql.server stop</p>
+<p><strong>mysqld_multi</strong></p>
+<p>其实我们一台计算机上也可以运行多个服务器实例，也就是运行多个 MySQL 服务器进程。 mysql_multi 可执行文 件可以对每一个服务器进程的启动或停止进行监控。</p>
+<h2 id="Windows里启动服务器程序"><a href="#Windows里启动服务器程序" class="headerlink" title="Windows里启动服务器程序"></a><strong>Windows</strong>里启动服务器程序</h2><p>Windows 里没有像类 UNIX 系统中那么多的启动脚本，但是也提供了手动启动和以服务的形式启动这两种方式，</p>
+<p>下边我们详细看。</p>
+<p><strong>mysqld</strong></p>
+<p>同样的，在 MySQL 安装目录下的 bin 目录下有一个 mysqld 可执行文件，在命令行里输入 mysqld ，或者直接双 击运行它就算启动了 MySQL 服务器程序了。</p>
+<p><strong>1.3.2.2</strong> 以服务的方式运行服务器程序</p>
+<p>首先看看啥是个 Windows 服务?如果无论是谁正在使用这台计算机，我们都需要长时间的运行某个程序，而且 需要在计算机启动的时候便启动它，一般我们都会把它注册为一个 Windows 服务 ，操作系统会帮我们管理它。 把某个程序注册为 Windows 服务的方式挺简单，如下:</p>
+<p>“完整的可执行文件路径” –install [-manual] [服务名]</p>
+<p>其中的 -manual 可以省略，加上它的话表示在 Windows 系统启动的时候不自动启动该服务，否则会自动启动。</p>
+<p>服务名 也可以省略，默认的服务名就是 MySQL 。比如我的 Windows 计算机上 mysqld 的完整路径是: C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld</p>
+<p>所以如果我们想把它注册为服务的话可以在命令行里这么写:</p>
+<p>“C:\Program Files\MySQL\MySQL Server 5.7\bin\mysqld” –install</p>
+<p>在把 mysqld 注册为 Windows 服务之后，我们就可以通过下边这个命令来启动 MySQL 服务器程序了:</p>
+<p>net start MySQL</p>
+<p>当然，如果你喜欢图形界面的话，你可以通过 Windows 的服务管理器通过用鼠标点点点的方式来启动和停止服务</p>
+<p>(作为一个程序猿，还是用黑框框吧~)。 关闭这个服务也非常简单，只要把上边的 start 换成 stop 就行了，就像这样:</p>
+<p>  net stop MySQL</p>
+<h2 id="服务器处理客户端请求"><a href="#服务器处理客户端请求" class="headerlink" title="服务器处理客户端请求"></a>服务器处理客户端请求</h2><p>其实不论客户端进程和服务器进程是采用哪种方式进行通信，最后实现的效果都是:客户端进程向服务器进程发 送一段文本(MySQL语句)，服务器进程处理后再向客户端进程发送一段文本(处理结果)</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220302091246776.png" alt="image-20220302091246776" style="zoom:35%;" />
+
+<p>客户端进程可以采用我们上边介绍的 TCP&#x2F;IP 、 命名管道或共享内存 、 Unix域套接字 这几种方式之一来与服务 器进程建立连接，每当有一个客户端进程连接到服务器进程时，服务器进程都会创建一个线程来专门处理与这个 客户端的交互，当该客户端退出时会与服务器断开连接，服务器并不会立即把与该客户端交互的线程销毁掉，而 是把它缓存起来，在另一个新的客户端再进行连接时，把这个缓存的线程分配给该新客户端。这样就起到了不频 繁创建和销毁线程的效果，从而节省开销。</p>
+<p>如果两个查询请求在任何字符上的不同(例如:空格、注释、大小写)，都 会导致缓存不会命中。另外，如果查询请求中包含某些系统函数、用户自定义变量和函数、一些系统表，如 mysql 、information_schema、 performance_schema 数据库中的表，那这个请求就不会被缓存。</p>
+<p>不过既然是缓存，那就有它缓存失效的时候。MySQL的缓存系统会监测涉及到的每张表，只要该表的结构或者数 据被修改，如对该表使用了 INSERT 、 UPDATE 、 DELETE 、 TRUNCATE TABLE 、 ALTER TABLE 、 DROP TABLE 或</p>
+<p>DROP DATABASE 语句，那使用该表的所有高速缓存查询都将变为无效并从高速缓存中删除!</p>
+<h2 id="常用存储引擎"><a href="#常用存储引擎" class="headerlink" title="常用存储引擎"></a>常用存储引擎</h2><img data-src="../images/pic/mysql-how-it-works/image-20220304090948840.png" alt="image-20220304090948840" style="zoom:40%;" />
+
+<p>这么多我们怎么挑啊，哈哈，你多虑了，其实我们最常用的就是 InnoDB 和 MyISAM ，有时会提一下 Memory 。其 中 InnoDB 是 MySQL 默认的存储引擎，我们之后会详细唠叨这个存储引擎的各种功能，现在先看一下一些存储引 擎对于某些功能的支持情况</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304171109772.png" alt="image-20220304171109772" style="zoom:43%;" />
+
+<img data-src="../images/pic/mysql-how-it-works/image-20220304171131761.png" alt="image-20220304171131761" style="zoom:43%;" />
+
+<h2 id="一些重要的字符集"><a href="#一些重要的字符集" class="headerlink" title="一些重要的字符集"></a>一些重要的字符集</h2><ul>
+<li><p>ASCII 字符集 共收录128个字符，包括空格、标点符号、数字、大小写字母和一些不可见字符。由于总共才128个字符，所以可以使用1个字节来进行编码，我们看一些字符的编码方式:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#x27;L&#x27; -&gt; 01001100(十六进制:0x4C，十进制:76)</span><br><span class="line">&#x27;M&#x27; -&gt; 01001101(十六进制:0x4D，十进制:77) </span><br></pre></td></tr></table></figure>
+</li>
+<li><p>ISO 8859-1 字符集 共收录256个字符，是在 ASCII 字符集的基础上又扩充了128个西欧常用字符(包括德法两国的字母)，也可以 使用1个字节来进行编码。这个字符集也有一个别名 latin1 。</p>
+</li>
+<li><p>GB2312 字符集 收录了汉字以及拉丁字母、希腊字母、日文平假名及片假名字母、俄语西里尔字母。其中收录汉字6763个， 其他文字符号682个。同时这种字符集又兼容 ASCII 字符集，所以在编码方式上显得有些奇怪:</p>
+</li>
+<li><ul>
+<li>如果该字符在 ASCII 字符集中，则采用1字节编码。 </li>
+<li>否则采用2字节编码。</li>
+</ul>
+</li>
+</ul>
+<p>这种表示一个字符需要的字节数可能不同的编码方式称为 变长编码方式 。比方说字符串 ‘爱u’ ，其 中 ‘爱’ 需要用2个字节进行编码，编码后的十六进制表示为 0xCED2 ， ‘u’ 需要用1个字节进行编码， 编码后的十六进制表示为 0x75 ，所以拼合起来就是 0xCED275 。</p>
+<blockquote>
+<p>小贴士: 我们怎么区分某个字节代表一个单独的字符还是代表某个字符的一部分呢?别忘了<code>ASCII</code>字 符集只收录128个字符，使用0<del>127就可以表示全部字符，所以如果某个字节是在0</del>127之内 的，就意味着一个字节代表一个单独的字符，否则就是两个字节代表一个单独的字符。</p>
+</blockquote>
+<ul>
+<li><p>GBK 字符集 GBK 字符集只是在收录字符范围上对 GB2312 字符集作了扩充，编码方式上兼容 GB2312 。</p>
+</li>
+<li><p>utf8 字符集 收录地球上能想到的所有字符，而且还在不断扩充。这种字符集兼容 ASCII 字符集，采用变长编码方式，编码一个字符需要使用1~4个字节，比方说这样: </p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&#x27;L&#x27; -&gt; 01001100(十六进制:0x4C)</span><br><span class="line">&#x27;啊&#x27; -&gt; 111001011001010110001010(十六进制:0xE5958A)</span><br></pre></td></tr></table></figure></li>
+</ul>
+<blockquote>
+<p>小贴士: 其实准确的说，utf8只是Unicode字符集的一种编码方案，Unicode字符集可以采用utf8、utf1 6、utf32这几种编码方案，utf8使用1<del>4个字节编码一个字符，utf16使用2个或4个字节编码一个 字符，utf32使用4个字节编码一个字符。更详细的Unicode和其编码方案的知识不是本书的重点， 大家上网查查哈</del></p>
+</blockquote>
+<p>MySQL中并不区分字符集和编码方案的概念，所以后边唠叨的时候把utf8、utf16、utf32都当作 一种字符集对待。</p>
+<p>对于同一个字符，不同字符集也可能有不同的编码方式。比如对于汉字 ‘我’ 来说， ASCII 字符集中根本没有收 录这个字符， utf8 和 gb2312 字符集对汉字 我 的编码方式如下:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">utf8编码:111001101000100010010001 (3个字节，十六进制表示是:0xE68891) </span><br><span class="line">gb2312编码:1100111011010010 (2个字节，十六进制表示是:0xCED2)</span><br></pre></td></tr></table></figure>
+
+<h3 id="MySQL中的utf8和utf8mb4"><a href="#MySQL中的utf8和utf8mb4" class="headerlink" title="MySQL中的utf8和utf8mb4"></a><strong>MySQL</strong>中的<strong>utf8</strong>和<strong>utf8mb4</strong></h3><p>我们上边说 utf8 字符集表示一个字符需要使用1<del>4个字节，但是我们常用的一些字符使用1</del>3个字节就可以表 示了。而在 MySQL 中字符集表示一个字符所用最大字节长度在某些方面会影响系统的存储和性能，所以设计</p>
+<p>MySQL 的大叔偷偷的定义了两个概念:</p>
+<ul>
+<li><p>utf8mb3 :阉割过的 utf8 字符集，只使用1~3个字节表示字符。</p>
+</li>
+<li><p>utf8mb4 :正宗的 utf8 字符集，使用1~4个字节表示字符。</p>
+</li>
+</ul>
+<p>有一点需要大家十分的注意，在 MySQL 中 utf8 是 utf8mb3 的别名，所以之后在 MySQL 中提到 utf8 就意味着使 用1~3个字节来表示一个字符，如果大家有使用4字节编码一个字符的情况，比如存储一些emoji表情啥的，那请 使用 utf8mb4 。</p>
+<h3 id="比较规则的查看"><a href="#比较规则的查看" class="headerlink" title="比较规则的查看"></a>比较规则的查看</h3><p>查看 MySQL 中支持的比较规则的命令如下:</p>
+<p>SHOW COLLATION [LIKE 匹配的模式];</p>
+<p>我们前边说过一种字符集可能对应着若干种比较规则， MySQL 支持的字符集就已经非常多了，所以支持的比较规 则更多，我们先只查看一下 utf8 字符集下的比较规则:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; show COLLATION like &#x27;utf8\_%&#x27;;</span><br><span class="line">+--------------------------+---------+-----+---------+----------+---------+</span><br><span class="line">| Collation                | Charset | Id  | Default | Compiled | Sortlen |</span><br><span class="line">+--------------------------+---------+-----+---------+----------+---------+</span><br><span class="line">| utf8_general_ci          | utf8    |  33 | Yes     | Yes      |       1 |</span><br><span class="line">| utf8_bin                 | utf8    |  83 |         | Yes      |       1 |</span><br><span class="line">| utf8_unicode_ci          | utf8    | 192 |         | Yes      |       8 |</span><br><span class="line">| utf8_icelandic_ci        | utf8    | 193 |         | Yes      |       8 |</span><br><span class="line">| utf8_latvian_ci          | utf8    | 194 |         | Yes      |       8 |</span><br><span class="line">| utf8_romanian_ci         | utf8    | 195 |         | Yes      |       8 |</span><br><span class="line">| utf8_slovenian_ci        | utf8    | 196 |         | Yes      |       8 |</span><br><span class="line">| utf8_polish_ci           | utf8    | 197 |         | Yes      |       8 |</span><br><span class="line">| utf8_estonian_ci         | utf8    | 198 |         | Yes      |       8 |</span><br><span class="line">| utf8_spanish_ci          | utf8    | 199 |         | Yes      |       8 |</span><br><span class="line">| utf8_swedish_ci          | utf8    | 200 |         | Yes      |       8 |</span><br><span class="line">| utf8_turkish_ci          | utf8    | 201 |         | Yes      |       8 |</span><br><span class="line">| utf8_czech_ci            | utf8    | 202 |         | Yes      |       8 |</span><br><span class="line">| utf8_danish_ci           | utf8    | 203 |         | Yes      |       8 |</span><br><span class="line">| utf8_lithuanian_ci       | utf8    | 204 |         | Yes      |       8 |</span><br><span class="line">| utf8_slovak_ci           | utf8    | 205 |         | Yes      |       8 |</span><br><span class="line">| utf8_spanish2_ci         | utf8    | 206 |         | Yes      |       8 |</span><br><span class="line">| utf8_roman_ci            | utf8    | 207 |         | Yes      |       8 |</span><br><span class="line">| utf8_persian_ci          | utf8    | 208 |         | Yes      |       8 |</span><br><span class="line">| utf8_esperanto_ci        | utf8    | 209 |         | Yes      |       8 |</span><br><span class="line">| utf8_hungarian_ci        | utf8    | 210 |         | Yes      |       8 |</span><br><span class="line">| utf8_sinhala_ci          | utf8    | 211 |         | Yes      |       8 |</span><br><span class="line">| utf8_german2_ci          | utf8    | 212 |         | Yes      |       8 |</span><br><span class="line">| utf8_croatian_ci         | utf8    | 213 |         | Yes      |       8 |</span><br><span class="line">| utf8_unicode_520_ci      | utf8    | 214 |         | Yes      |       8 |</span><br><span class="line">| utf8_vietnamese_ci       | utf8    | 215 |         | Yes      |       8 |</span><br><span class="line">| utf8_general_mysql500_ci | utf8    | 223 |         | Yes      |       1 |</span><br><span class="line">+--------------------------+---------+-----+---------+----------+---------+</span><br><span class="line">27 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+
+<p>这些比较规则的命名还挺有规律的，具体规律如下:</p>
+<ul>
+<li>比较规则名称以与其关联的字符集的名称开头。如上图的查询结果的比较规则名称都是以 utf8 开头的。 </li>
+<li>后边紧跟着该比较规则主要作用于哪种语言，比如 utf8_polish_ci 表示以波兰语的规则比较，utf8_spanish_ci 是以西班牙语的规则比较， utf8_general_ci 是一种通用的比较规则。 </li>
+<li>名称后缀意味着该比较规则是否区分语言中的重音、大小写啥的，具体可以用的值如下:</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>后缀</th>
+<th>英文释义</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>_ai</td>
+<td>accent insensitive</td>
+<td>不区分重音</td>
+</tr>
+<tr>
+<td>_as</td>
+<td>accent sensitive</td>
+<td>区分重 音</td>
+</tr>
+<tr>
+<td>_ci</td>
+<td>case insensitive</td>
+<td>不区分大小写</td>
+</tr>
+<tr>
+<td>_cs</td>
+<td>case sensitive</td>
+<td>区分大小写</td>
+</tr>
+<tr>
+<td>_bin</td>
+<td>binary</td>
+<td>以二进制 方式比较</td>
+</tr>
+</tbody></table>
+<p>比如 utf8_general_ci 这个比较规则是以 ci 结尾的，说明不区分大小写。</p>
+<p>每种字符集对应若干种比较规则，每种字符集都有一种默认的比较规则， SHOW COLLATION 的返回结果中的 Default 列的值为 YES 的就是该字符集的默认比较规则，比方说 utf8 字符集默认的比较规则就是 utf8_general_ci 。</p>
+<h3 id="MySQL有四个级别的字符集和比较规则"><a href="#MySQL有四个级别的字符集和比较规则" class="headerlink" title="MySQL有四个级别的字符集和比较规则"></a>MySQL有四个级别的字符集和比较规则</h3><ul>
+<li>服务器级别</li>
+</ul>
+<blockquote>
+<p>character_set_server 表示服务器级别的字符集， collation_server 表示服务器级别的比较规则。</p>
+</blockquote>
+<ul>
+<li>数据库级别</li>
+</ul>
+<blockquote>
+<p>创建和修改数据库时可以指定字符集和比较规则:</p>
+<p>​	CREATE DATABASE 数据库名</p>
+<p>​			[[DEFAULT] CHARACTER SET 字符集名称] [[DEFAULT] COLLATE 比较规则名称];</p>
+</blockquote>
+<blockquote>
+<p>ALTER DATABASE 数据库名</p>
+<p>​			[[DEFAULT] CHARACTER SET 字符集名称] [[DEFAULT] COLLATE 比较规则名称];</p>
+</blockquote>
+<p>character_set_database 表示当前数据库的字符集， collation_database 表示当前默认数据库的比较 规则，这两个系统变量是只读的，不能修改。如果没有指定当前默认数据库，则变量与相应的服务器级 系统变量具有相同的值。</p>
+<ul>
+<li>表级别</li>
+</ul>
+<blockquote>
+<p>创建和修改表的时候指定表的字符集和比较规则:</p>
+<p>​	CREATE TABLE 表名 (列的信息)</p>
+<p>​			[[DEFAULT] CHARACTER SET 字符集名称]  [COLLATE 比较规则名称]];</p>
+</blockquote>
+<blockquote>
+<p> ALTER TABLE 表名</p>
+<p>​			[[DEFAULT] CHARACTER SET 字符集名称]  [COLLATE 比较规则名称];</p>
+</blockquote>
+<ul>
+<li>列级别</li>
+</ul>
+<blockquote>
+<p>创建和修改列定义的时候可以指定该列的字符集和比较规则:</p>
+<p>CREATE TABLE 表名(</p>
+<p>​	列名 字符串类型 [CHARACTER SET 字符集名称] [COLLATE 比较规则名称], </p>
+<p>​	其他列…</p>
+<p>);</p>
+<p>ALTER TABLE 表名 MODIFY 列名 字符串类型 [CHARACTER SET 字符集名称] [COLLATE 比较规 则名称];</p>
+</blockquote>
+<h2 id="InnoDB记录结构"><a href="#InnoDB记录结构" class="headerlink" title="InnoDB记录结构"></a><strong>InnoDB</strong>记录结构</h2><p>InnoDB 采取的方式是:将数据划分为若干个页，以页作为磁盘和内存之间交互的基本单位，InnoDB中页的大小 一般为 <strong>16</strong> KB。也就是在一般情况下，一次最少从磁盘中读取16KB的内容到内存中，一次最少把内存中的16KB 内容刷新到磁盘中。</p>
+<p>我们平时是以记录为单位来向表中插入数据的，这些记录在磁盘上的存放方式也被称为 **行格式 或者 记录格式 **。 设计 InnoDB 存储引擎的大叔们到现在为止设计了4种不同类型的 行格式 ，分别是 Compact 、 Redundant 、Dynamic 和 Compressed 行格式，随着时间的推移，他们可能会设计出更多的行格式，但是不管怎么变，在原理 上大体都是相同的。</p>
+<h3 id="compact-行格式"><a href="#compact-行格式" class="headerlink" title="compact 行格式"></a>compact 行格式</h3><img data-src="../images/pic/mysql-how-it-works/image-20220304114204074.png" alt="image-20220304114204074" style="zoom:30%;" />
+
+<p>在 Compact 行格式中，把所有变长字段的真实数据占用的字节长度都存放在记录的开头部位，从而形成一个变长 字段长度列表，各变长字段数据占用的字节数 <strong>按照列的顺序逆序存放</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; CREATE TABLE record_format_demo (</span><br><span class="line">    -&gt;     c1 VARCHAR(10),</span><br><span class="line">    -&gt;     c2 VARCHAR(10) NOT NULL,</span><br><span class="line">    -&gt;     c3 CHAR(10),</span><br><span class="line">    -&gt;     c4 VARCHAR(10)</span><br><span class="line">    -&gt; ) CHARSET=ascii ROW_FORMAT=COMPACT;</span><br><span class="line">    </span><br><span class="line">mysql&gt; INSERT INTO record_format_demo(c1, c2, c3, c4) VALUES(&#x27;aaaa&#x27;, &#x27;bbb&#x27;, &#x27;cc&#x27;, &#x27;d&#x27;),</span><br><span class="line">     (&#x27;eeee&#x27;, &#x27;fff&#x27;, NULL, NULL);</span><br><span class="line">    Query OK, 2 rows affected (0.02 sec)</span><br><span class="line">    Records: 2  Duplicates: 0  Warnings: 0</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; SELECT * FROM record_format_demo;</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    | c1   | c2  | c3   | c4   |</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    | aaaa | bbb | cc   | d    |</span><br><span class="line">    | eeee | fff | NULL | NULL |</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    2 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+
+<h4 id="变长字段长度列表"><a href="#变长字段长度列表" class="headerlink" title="变长字段长度列表"></a>变长字段长度列表</h4><p>由于第一行记录中 c1 、 c2 、 c4 列中的字符串都比较短，也就是说内容占用的字节数比较小，用1个字节就可 以表示，但是如果变长列的内容占用的字节数比较多，<strong>可能就需要用2个字节来表示</strong>。具体用1个还是2个字节来 表示真实数据占用的字节数， InnoDB 有它的一套规则，我们首先声明一下 W 、 M 和 L 的意思:</p>
+<ol>
+<li><p>假设某个字符集中表示一个字符最多需要使用的字节数为 W ，也就是使用 SHOW CHARSET 语句的结果中的 Maxlen 列，比方说 utf8 字符集中的 W 就是 3 ， gbk 字符集中的 W 就是 2 ， ascii 字符集中的 W 就是 1。</p>
+</li>
+<li><p>对于变长类型 <strong>VARCHAR(M)</strong> 来说，这种类型表示能存储最多 M 个字符(注意是字符不是字节)，所以这个类 型能表示的字符串最多占用的字节数就是 M×W 。</p>
+</li>
+<li><p>假设它实际存储的字符串占用的字节数是 L 。 所以确定使用1个字节还是2个字节表示真正字符串占用的字节数的规则就是这样:</p>
+</li>
+</ol>
+<p>如果 M×W &lt;&#x3D; 255 ，那么使用1个字节来表示真正字符串占用的字节数。 也就是说InnoDB在读记录的变长字段长度列表时先查看表结构，如果某个变长字段允许存储的最大字节数不大于255时，可以认为只使用1个字节来表示真正字符串占用的字节数。</p>
+<p>如果 M×W &gt; 255 ，则分为两种情况:</p>
+<p>如果 L &lt;&#x3D; 127 ，则用1个字节来表示真正字符串占用的字节数。 如果 L &gt; 127 ，则用2个字节来表示真正字符串占用的字节数。</p>
+<blockquote>
+<p>InnoDB在读记录的变长字段长度列表时先查看表结构，如果某个变长字段允许存储的最大字节数大于255时，该怎么区分它正在读的某个字节是一个单独的字段长度还是半个字段长度呢? </p>
+<p>设计InnoDB的大叔使用该字节的第一个二进制位作为标志位:如果该字节的第一个位为0，那 该字节就是一个单独的字段长度(使用一个字节表示不大于127的二进制的第一个位都为0)， 如果该字节的第一个位为1，那该字节就是半个字段长度。</p>
+</blockquote>
+<blockquote>
+<p>对于一些占用字节数非常多的字段，比方说某个字段长度大于了16KB，那么如果该记录在单个 页面中无法存储时，InnoDB会把一部分数据存放到所谓的溢出页中(我们后边会唠叨)，在变 长字段长度列表处只存储留在本页面中的长度，所以使用两个字节也可以存放下来。</p>
+</blockquote>
+<p>总结一下就是说: </p>
+<ul>
+<li><strong>如果该可变字段允许存储的最大字节数( M×W )超过255字节并且真实存储的字节数( L ) 超过127字节，则使用2个字节，否则使用1个字节。</strong></li>
+<li>变长字段长度列表中只存储值为 <strong>非NULL</strong> 的列内容占用的长度，值为 <strong>NULL</strong> 的列的长度 是不储存的</li>
+<li>并不是所有记录都有这个 变长字段长度列表 部分，比方说表中所有的列都不是变长的数据类型的话， 这一部分就不需要有</li>
+</ul>
+<h4 id="NULL值列表"><a href="#NULL值列表" class="headerlink" title="NULL值列表"></a>NULL值列表</h4><p>如果表中没有允许存储 <strong>NULL</strong> 的列，则 NULL值列表 也不存在了，否则将每个允许存储 NULL 的列对应一个二进制位，二进制位按照列的顺序 <strong>逆序</strong> 排列</p>
+<ul>
+<li>二进制位的值为 1 时，代表该列的值为 NULL </li>
+<li>二进制位的值为 0 时，代表该列的值不为 NULL</li>
+</ul>
+<p>MySQL 规定 NULL值列表 必须用整数个字节的位表示，如果使用的二进制位个数不是整数个字节，则在字节 的高位补 0 </p>
+<h4 id="记录头信息"><a href="#记录头信息" class="headerlink" title="记录头信息"></a>记录头信息</h4><p>除了 变长字段长度列表 、 NULL值列表 之外，还有一个用于描述记录的 记录头信息 ，它是由固定的 5 个字节组 成。 5 个字节也就是 40 个二进制位，不同的位代表不同的意思</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304115429640.png" alt="image-20220304115429640" style="zoom:45%;" />
+
+<img data-src="../images/pic/mysql-how-it-works/image-20220304115655601.png" alt="image-20220304115655601" style="zoom:35%;" />
+
+<h4 id="记录的真实数据"><a href="#记录的真实数据" class="headerlink" title="记录的真实数据"></a>记录的真实数据</h4><p>对于 record_format_demo 表来说， 记录的真实数据 除了 c1 、 c2 、 c3 、 c4 这几个我们自己定义的列的数据 以外， MySQL 会为每个记录默认的添加一些列(也称为 隐藏列 )，具体的列如下</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304115517822.png" alt="image-20220304115517822" style="zoom:45%;" />
+
+<p>实际上这几个列的真正名称其实是:DB_ROW_ID、DB_TRX_ID、DB_ROLL_PTR，我们为了美观才写成了row _id、transaction_id和roll_pointer</p>
+<p><strong>这里需要提一下 InnoDB 表对主键的生成策略:</strong></p>
+<p>优先使用用户自定义主键作为主键，如果用户没有定义主键，则选取一个 Unique 键作为主键，如果表中连 Unique 键都没有定义的话，则 InnoDB 会为表默认添加一个名为row_id 的隐藏列作为主键</p>
+<h4 id="char-m-列的存储格式"><a href="#char-m-列的存储格式" class="headerlink" title="char(m)列的存储格式"></a>char(m)列的存储格式</h4><p>对于 *<strong>CHAR(M)*</strong> 类型的列来说：</p>
+<ul>
+<li>当列采用的是定长字符集时，该列占用的字节数不会被加到变长字段长度列表</li>
+<li>如果采用变长字符集时，该列占用的字节数也会被加到变长字段长度列表。</li>
+</ul>
+<p>char 如果采用定长字符集，则除真实数据以外的字节的统统都用空格字符填充，空格字符在 ascii 字符集的表示是 0x20 </p>
+<p>另外有一点还需要注意，变长字符集的 CHAR(M) 类型的列要求至少占用 M 个字节，而 VARCHAR(M) 却没有这个要 求。比方说对于使用 utf8 字符集的 CHAR(10) 的列来说，该列存储的数据字节长度的范围是10~30个字节。即 使我们向该列中存储一个空字符串也会占用 10 个字节，这是怕将来更新该列的值的字节长度大于原有值的字节 长度而小于10个字节时，可以在该记录处直接更新，而不是在存储空间中重新分配一个新的记录空间，导致原有 的记录空间成为所谓的碎片。</p>
+<h3 id="Redundant行格式"><a href="#Redundant行格式" class="headerlink" title="Redundant行格式"></a>Redundant行格式</h3><p>Redundant 行格式是 MySQL5.0 之前用的一种行格式，也就是说它已经非常老了</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304120241151.png" alt="image-20220304120241151" style="zoom:30%;" />
+
+<p>针对同一段数据</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; SELECT * FROM record_format_demo;</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    | c1   | c2  | c3   | c4   |</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    | aaaa | bbb | cc   | d    |</span><br><span class="line">    | eeee | fff | NULL | NULL |</span><br><span class="line">    +------+-----+------+------+</span><br><span class="line">    2 rows in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+
+
+
+<p>Redundant 格式</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304120312624.png" alt="image-20220304120312624" style="zoom:40%;" />
+
+<p>compact 格式</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220304120338554.png" alt="image-20220304120338554" style="zoom:40%;" />
+
+<p>下边我们从各个方面看一下 Redundant 行格式有什么不同的地方:</p>
+<ul>
+<li>字段长度偏移列表</li>
+</ul>
+<p>注意 Compact 行格式的开头是 变长字段长度列表 ，而 Redundant 行格式的开头是 字段长度偏移列表 ，与 变长字段长度列表 有两处不同:</p>
+<ul>
+<li><ul>
+<li>没有了变长两个字，意味着 Redundant 行格式会把该条记录中所有列(包括 隐藏列 )的长度信息都按 照逆序存储到 字段长度偏移列表 。</li>
+<li>多了个偏移两个字，这意味着计算列值长度的方式不像 Compact 行格式那么直观，它是采用两个相邻数 值的差值来计算各个列值的长度。</li>
+</ul>
+</li>
+</ul>
+<p>比如第一条记录的 字段长度偏移列表 就是: </p>
+<p>​		25 24 1A 17 13 0C 06</p>
+<p>  因为它是逆序排放的，所以按照列的顺序排列就是:</p>
+<p>​       06 0C 13 17 1A 24 25</p>
+<p>按照两个相邻数值的差值来计算各个列值的长度的意思就是: </p>
+<blockquote>
+<p>第一列(<code>row_id</code>)的长度就是 0x06个字节，也就是6个字节。 </p>
+<p>第二列(<code>transaction_id</code>)的长度就是 (0x0C - 0x06)个字节，也就是6个字节。 </p>
+<p>第三列(<code>roll_pointer</code>)的长度就是 (0x13 - 0x0C)个字节，也就是7个字节。 </p>
+<p>第四列(<code>c1</code>)的长度就是 (0x17 - 0x13)个字节，也就是4个字节。 </p>
+<p>第五列(<code>c2</code>)的长度就是 (0x1A - 0x17)个字节，也就是3个字节。 </p>
+<p>第六列(<code>c3</code>)的长度就是 (0x24 - 0x1A)个字节，也就是10个字节。</p>
+<p>第七列(<code>c4</code>)的长度就是 (0x25 - 0x24)个字节，也就是1个字节。</p>
+</blockquote>
+<ul>
+<li>记录头信息</li>
+</ul>
+<p>Redundant 行格式的记录头信息占用 6 字节， 48 个二进制位，这些二进制位代表的意思如下:</p>
+<table>
+<thead>
+<tr>
+<th align="center">名称</th>
+<th align="center">大小(单位:bit)</th>
+<th align="center">描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">预留位1</td>
+<td align="center">1</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">预留位2</td>
+<td align="center">1</td>
+<td align="center">没有使用</td>
+</tr>
+<tr>
+<td align="center">delete_mask</td>
+<td align="center">1</td>
+<td align="center">标记该记录是否被删除</td>
+</tr>
+<tr>
+<td align="center">min_rec_mask</td>
+<td align="center">1</td>
+<td align="center">B+树的每层非叶子节点中的最小记录都会添 加该标记</td>
+</tr>
+<tr>
+<td align="center">n_owned</td>
+<td align="center">4</td>
+<td align="center">表示当前记录拥有的记录数</td>
+</tr>
+<tr>
+<td align="center">heap_no</td>
+<td align="center">13</td>
+<td align="center">表示当前记录在页面堆的位置信息</td>
+</tr>
+<tr>
+<td align="center">n_field</td>
+<td align="center">10</td>
+<td align="center">表示记录中列的数量</td>
+</tr>
+<tr>
+<td align="center">1byte_offs_flag</td>
+<td align="center">1</td>
+<td align="center">标记字段长度偏移列表中每个列对应的偏移量是 使用1字节还是2字节表示的</td>
+</tr>
+<tr>
+<td align="center">next_record</td>
+<td align="center">16</td>
+<td align="center">表示下一条记录的相对位置</td>
+</tr>
+</tbody></table>
+<p>第一条记录中的头信息是:</p>
+<p>   00 00 10 0F 00 BC</p>
+<p>根据这六个字节可以计算出各个属性的值，如下:</p>
+<blockquote>
+<p>预留位1:0x00 </p>
+<p>预留位2:0x00 </p>
+<p>delete_mask: 0x00 </p>
+<p>min_rec_mask: 0x00 </p>
+<p>n_owned: 0x00 </p>
+<p>heap_no: 0x02 </p>
+<p>n_field: 0x07 </p>
+<p>1byte_offs_flag: 0x01 </p>
+<p>next_record:0xBC</p>
+</blockquote>
+<p>与 Compact 行格式的记录头信息对比来看，有两处不同:</p>
+<ul>
+<li><p>Redundant 行格式多了 n_field 和 1byte_offs_flag 这两个属性。 </p>
+</li>
+<li><p>Redundant 行格式没有 record_type 这个属性。</p>
+</li>
+<li><p>1byte_offs_flag 的值是怎么选择的</p>
+</li>
+</ul>
+<p>字段长度偏移列表 实质上是存储每个列中的值占用的空间在 记录的真实数据 处结束的位置，还是拿record_format_demo 第一条记录为例， 0x06 代表第一个列在 记录的真实数据 第6个字节处结束， 0x0C 代 表第二个列在 记录的真实数据 第12个字节处结束， 0x13 代表第三个列在 记录的真实数据 第19个字节处结 束，等等等等，最后一个列对应的偏移量值为 0x25 ，也就意味着最后一个列在 记录的真实数据 第37个字 节处结束，也就意味着整条记录的 真实数据 实际上占用 37 个字节。</p>
+<p>我们前边说过每个列对应的偏移量可以占用1个字节或者2个字节来存储，那到底什么时候用1个字节，什么 时候用2个字节呢?其实是根据该条 Redundant 行格式 记录的真实数据 占用的总大小来判断的:</p>
+<ul>
+<li>当记录的真实数据占用的字节数不大于127(十六进制 0x7F ，二进制 01111111 )时，每个列对应的偏 移量占用1个字节。</li>
+<li>小贴士: 如果整个记录的真实数据占用的存储空间都不大于127个字节，那么每个列对应的偏移量值肯 定也就不大于127，也就可以使用1个字节来表示喽。</li>
+<li>当记录的真实数据占用的字节数大于127，但不大于32767(十六进制 0x7FFF ，二进制 0111111111111111 )时，每个列对应的偏移量占用2个字节。</li>
+<li>有没有记录的真实数据大于32767的情况呢?有，不过此时的记录已经存放到了溢出页中，在本页中只 保留前 768 个字节和20个字节的溢出页面地址(当然这20个字节中还记录了一些别的信息)。因为 字 段长度偏移列表 处只需要记录每个列在本页面中的偏移就好了，所以每个列使用2个字节来存储偏移量 就够了。</li>
+</ul>
+<p>大家可以看出来，设计 Redundant 行格式的大叔还是比较简单粗暴的，直接使用整个 记录的真实数据 长度来决定使用1个字节还是2个字节存储列对应的偏移量。只要整条记录的真实数据占用的存储空间大 小大于127，即使第一个列的值占用存储空间小于127，那对不起，也需要使用2个字节来表示该列对应 的偏移量。简单粗暴，就是这么简单粗暴(所以这种行格式有些过时了~)。</p>
+<p>小贴士: 大家有没有疑惑，一个字节能表示的范围是0~255，为啥在记录的真实数据占用的存储空间大 于127时就采用2个字节表示各个列的偏移量呢?稍安勿躁，后边马上揭晓。</p>
+<p>为了在解析记录时知道每个列的偏移量是使用1个字节还是2个字节表示的，设计 Redundant 行格式的大 叔特意在 记录头信息 里放置了一个称之为 1byte_offs_flag 的属性: </p>
+<ul>
+<li><p>当它的值为1时，表明使用1个字节存储。</p>
+</li>
+<li><p>当它的值为0时，表明使用2个字节存储。</p>
+</li>
+<li><p>Redundant 行格式中 NULL 值的处理</p>
+</li>
+</ul>
+<p>因为 Redundant 行格式并没有 NULL值列表 ，所以设计 Redundant 行格式的大叔在 字段长度偏移列表 中的 各个列对应的偏移量处做了一些特殊处理 —— 将列对应的偏移量值的第一个比特位作为是否为 NULL 的依 据，该比特位也可以被称之为 NULL比特位 。也就是说在解析一条记录的某个列时，首先看一下该列对应的 偏移量的 NULL比特位 是不是为 1 ，如果为 1 ，那么该列的值就是 NULL ，否则不是 NULL 。</p>
+<p>这也就解释了上边介绍为什么只要记录的真实数据大于127(十六进制 0x7F ，二进制 01111111 )时，就采 用2个字节来表示一个列对应的偏移量，主要是第一个比特位是所谓的 NULL比特位 ，用来标记该列的值是否 为 NULL 。</p>
+<p>但是还有一点要注意，对于值为 NULL 的列来说，该列的类型是否为定长类型决定了 NULL 值的实际存储方 式，我们接下来分析一下 record_format_demo 表的第二条记录，它对应的 字段长度偏移列表 如下:</p>
+<p>   A4 A4 1A 17 13 0C 06</p>
+<p>按照列的顺序排放就是:</p>
+<p>   06 0C 13 17 1A A4 A4</p>
+<p>我们分情况看一下:</p>
+<ul>
+<li>如果存储 NULL 值的字段是定长类型的，比方说 CHAR(M) 数据类型的，则 NULL 值也将占用记录的真实 数据部分，并把该字段对应的数据使用 0x00 字节填充。</li>
+</ul>
+<p>如图第二条记录的 c3 列的值是 NULL ，而 c3 列的类型是 CHAR(10) ，占用记录的真实数据部分10字 节，所以我们看到在 Redundant 行格式中使用 0x00000000000000000000 来表示 NULL 值。</p>
+<p>另外， c3 列对应的偏移量为 0xA4 ，它对应的二进制实际是: 10100100 ，可以看到最高位为 1 ，意味 着该列的值是 NULL 。将最高位去掉后的值变成了 0100100 ，对应的十进制值为 36 ，而 c2 列对应的偏 移量为 0x1A ，也就是十进制的 26 。 36 - 26 &#x3D; 10 ，也就是说最终 c3 列占用的存储空间为10个字 节。</p>
+<ul>
+<li>如果该存储 NULL 值的字段是变长数据类型的，则不在 记录的真实数据 处占用任何存储空间。</li>
+</ul>
+<p>比如 record_format_demo 表的 c4 列是 VARCHAR(10) 类型的， VARCHAR(10) 是一个变长数据类型， c4 列对应的偏移量为 0xA4 ，与 c3 列对应的偏移量相同，这也就意味着它的值也为 NULL ，将 0xA4的最高位去掉后对应的十进制值也是 36 ， 36 - 36 &#x3D; 0 ，也就意味着 c4 列本身不占用任何 记录的实 际数据 处的空间。</p>
+<p>除了以上的几点之外， Redundant 行格式和 Compact 行格式还是大致相同的。</p>
+<h4 id="char-m-列的存储格式-1"><a href="#char-m-列的存储格式-1" class="headerlink" title="char(m)列的存储格式"></a>char(m)列的存储格式</h4><p>我们知道 Compact 行格式在 CHAR(M) 类型的列中存储数据的时候还挺麻烦，分变长字符集和定长字符集的情况， 而在 Redundant 行格式中十分干脆，不管该列使用的字符集是啥，只要是使用 CHAR(M) 类型，占用的真实数据空 间就是该字符集表示一个字符最多需要的字节数和 M 的乘积。比方说使用 utf8 字符集的 CHAR(10) 类型的列占 用的真实数据空间始终为 30 个字节，使用 gbk 字符集的 CHAR(10) 类型的列占用的真实数据空间始终为 20 个字 节。由此可以看出来，使用 Redundant 行格式的 CHAR(M) 类型的列是不会产生碎片的。</p>
+<h3 id="行溢出数据"><a href="#行溢出数据" class="headerlink" title="行溢出数据"></a>行溢出数据</h3><h4 id="VARCHAR-M-最多能存储的数据"><a href="#VARCHAR-M-最多能存储的数据" class="headerlink" title="VARCHAR(M) 最多能存储的数据"></a>VARCHAR(M) 最多能存储的数据</h4><p>我们知道对于mysql一行有65535字节限制，则 VARCHAR(M) 类型的列最多可以占用 65535 个字节。其中的 M 代表该类型最多存储的字符数量，如 果我们使用 ascii 字符集的话，一个字符就代表一个字节</p>
+<p>这个 65535 个字节除了列本身的数据之外，还包括一些 其他的数据( storage overhead )，比如说我们为了存储一个 VARCHAR(M) 类型的列，其实需要占用3部分存储 空间:</p>
+<ul>
+<li>真实数据</li>
+<li>真实数据占用字节的长度</li>
+<li>NULL 值标识，如果该列有 NOT NULL 属性则可以没有这部分存储空间</li>
+</ul>
+<p>如果该 VARCHAR 类型的列没有 NOT NULL 属性，那最多只能存储 65532 个字节的数据，因为真实数据的长度可能占用2个字节， NULL 值标识需要占用1个字节:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; CREATE TABLE varchar_size_demo(</span><br><span class="line">        -&gt;      c VARCHAR(65532)</span><br><span class="line">        -&gt; ) CHARSET=ascii ROW_FORMAT=Compact;</span><br><span class="line">    Query OK, 0 rows affected (0.02 sec)</span><br></pre></td></tr></table></figure>
+
+<p>如果 VARCHAR 类型的列有 NOT NULL 属性，那最多只能存储 65533 个字节的数据，因为真实数据的长度可能占用 2个字节，不需要 NULL 值标识</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">mysql&gt; DROP TABLE varchar_size_demo;</span><br><span class="line">    Query OK, 0 rows affected (0.01 sec)</span><br><span class="line">mysql&gt; CREATE TABLE varchar_size_demo(</span><br><span class="line">        -&gt;      c VARCHAR(65533) NOT NULL</span><br><span class="line">        -&gt; ) CHARSET=ascii ROW_FORMAT=Compact;</span><br><span class="line">Query OK, 0 rows affected (0.02 sec)</span><br></pre></td></tr></table></figure>
+
+<p>如果 VARCHAR(M) 类型的列使用的不是 ascii 字符集，那 M 的最大取值取决于该字符集 表示一个字符最多需要的字节数。在列的值允许为 NULL 的情况下， gbk 字符集表示一个字符最多需要 2 个字 节，那在该字符集下， M 的最大取值就是 32766 (也就是:65532&#x2F;2)，也就是说最多能存储 32766 个字符;</p>
+<p>utf8 字符集表示一个字符最多需要 3 个字节，那在该字符集下， M 的最大取值就是 21844 ，就是说最多能存 储 21844 (也就是:65532&#x2F;3)个字符</p>
+<blockquote>
+<p>小贴士: 上述所言在列的值允许为NULL的情况下，gbk字符集下M的最大取值就是32766，utf8字符集下M的最大取 值就是21844，这都是在表中只有一个字段的情况下说的，一定要记住 <strong>一个行中的所有列(不包括隐藏 列和记录头信息)占用的字节长度加起来不能超过65535个字节</strong></p>
+</blockquote>
+<h4 id="记录中的数据太多产生的溢出"><a href="#记录中的数据太多产生的溢出" class="headerlink" title="记录中的数据太多产生的溢出"></a>记录中的数据太多产生的溢出</h4><p>MySQL 中磁盘和内存交互的基本单位是 页 ，也就是说 MySQL 是以 页 为基本单位来管理存储空间的，我们 的记录都会被分配到某个 页 中存储。而一个页的大小一般是 16KB ，也就是 16384 字节，而一个 VARCHAR(M) 类 型的列就最多可以存储 65532 个字节，这样就可能造成一个页存放不了一条记录的尴尬情况</p>
+<p>在 Compact 和 Reduntant 行格式中，对于占用存储空间非常大的列，在 记录的真实数据 处只会存储该列的一部 分数据，把剩余的数据分散存储在几个其他的页中，然后 记录的真实数据 处用20个字节存储指向这些页的地址 (当然这20个字节中还包括这些分散在其他页面中的数据的占用的字节数)，从而可以找到剩余数据所在的页</p>
+<p>对于 Compact 和 Reduntant 行格式来说，如果某一列中的数据非常多的话，在本记录的真实 数据处只会存储该列的前 768 个字节的数据和一个指向其他页的地址，然后把剩下的数据存放到其他页中，这个 过程也叫做 行溢出 ，存储超出 768 字节的那些页面也被称为 溢出页 。画一个简图就是这样</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220307201728427.png" alt="image-20220307201728427" style="zoom:33%;" />
+
+<h4 id="行溢出的临界点"><a href="#行溢出的临界点" class="headerlink" title="行溢出的临界点"></a>行溢出的临界点</h4><p>那发生 行溢出 的临界点是什么呢?也就是说在列存储多少字节的数据时就会发生 行溢出 ?</p>
+<p>MySQL 中规定一个页中至少存放两行记录，至于为什么这么规定我们之后再说，现在看一下这个规定造成的影 响。以上边的 varchar_size_demo 表为例，它只有一个列 c ，我们往这个表中插入两条记录，每条记录最少插入 多少字节的数据才会 行溢出 的现象呢?这得分析一下页中的空间都是如何利用的。</p>
+<ul>
+<li>每个页除了存放我们的记录以外，也需要存储一些额外的信息，乱七八糟的额外信息加起来需要 136 个字节 的空间(现在只要知道这个数字就好了)，其他的空间都可以被用来存储记录。 </li>
+<li>每个记录需要的额外信息是 27 字节。</li>
+</ul>
+<p>这27个字节包括下边这些部分: </p>
+<ul>
+<li>2个字节用于存储真实数据的长度 </li>
+<li>1个字节用于存储列是否是NULL值 </li>
+<li>5个字节大小的头信息</li>
+<li>6个字节的 row_id 列 </li>
+<li>6个字节的 transaction_id 列 </li>
+<li>7个字节的 roll_pointer 列</li>
+</ul>
+<p>假设一个列中存储的数据字节数为n，那么发生 行溢出 现象时需要满足这个式子: 136 + 2×(27 + n) &gt; 16384</p>
+<p>求解这个式子得出的解是: n &gt; 8098 。也就是说如果一个列中存储的数据不大于 8098 个字节，那就不会发生 行溢出 ，否则就会发生 行溢出 。不过这个 8098 个字节的结论只是针对只有一个列的 varchar_size_demo 表来</p>
+<p>说的，如果表中有多个列，那上边的式子和结论都需要改一改了，所以重点就是:你不用关注这个临界点是什 么，只要知道如果我们想一个行中存储了很大的数据时，可能发生 行溢出 的现象</p>
+<h3 id="Dynamic和Compressed行格式"><a href="#Dynamic和Compressed行格式" class="headerlink" title="Dynamic和Compressed行格式"></a><strong>Dynamic</strong>和<strong>Compressed</strong>行格式</h3><p>下边要介绍另外两个行格式， Dynamic 和 Compressed 行格式，我现在使用的 MySQL 版本是 5.7 ，它的默认行格 式就是 Dynamic ，这俩行格式和 Compact 行格式挺像，只不过在处理 行溢出 数据时有点儿分歧，它们不会在记 录的真实数据处存储字段真实数据的前 768 个字节，而是把所有的字节都存储到其他页面中，只在记录的真实数 据处存储其他页面的地址，就像这样</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220307202018455.png" alt="image-20220307202018455" style="zoom:33%;" />
+
+<p>Compressed 行格式和 Dynamic 不同的一点是， Compressed 行格式会采用压缩算法对页面进行压缩，以节省空 间。</p>
+<h2 id="InnoDB数据页结构"><a href="#InnoDB数据页结构" class="headerlink" title="InnoDB数据页结构"></a><strong>InnoDB</strong>数据页结构</h2><p>数据页代表的这块 16KB 大小的存储空间可以被划分为多个部分，不同部分有不同的功能，各个部分如图所示:</p>
+<img data-src="../images/pic/mysql-how-it-works/image-20220307202351419.png" alt="image-20220307202351419" style="zoom:33%;" />
+
+<img data-src="../images/pic/mysql-how-it-works/image-20220307202500054.png" alt="image-20220307202500054" style="zoom:35%;" />]]></content>
+      <categories>
+        <category>Mysql</category>
+      </categories>
+      <tags>
+        <tag>原理</tag>
+        <tag>mysq</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>ConcurrentHashMap的transfer</title>
     <url>/java-ConcurrentHashMap-transfer.html</url>
     <content><![CDATA[<p><code>ConcurrenthashMap</code> 的 <code>transfer</code> 主要是用于扩容重组阶段，当内部数组的容量值超过阈值时，将触发扩容重组， <code>transfer</code> 是该过程的主要实现。</p>
@@ -66,7 +1646,7 @@
 <p>至此，整个 <code>ConcurrentHashMap</code> 的转换过程算完了</p>
 ]]></content>
       <categories>
-        <category>java多线程</category>
+        <category>Java并发编程</category>
       </categories>
       <tags>
         <tag>java</tag>
@@ -1822,9 +3402,9 @@
       </categories>
       <tags>
         <tag>原理</tag>
+        <tag>IO</tag>
         <tag>网络</tag>
         <tag>netty</tag>
-        <tag>NIO</tag>
         <tag>读书笔记</tag>
       </tags>
   </entry>
@@ -4896,8 +6476,8 @@ Hash(object4) = key4；
         <category>Mysql</category>
       </categories>
       <tags>
-        <tag>mysql</tag>
         <tag>数据结构</tag>
+        <tag>mysql</tag>
       </tags>
   </entry>
   <entry>
@@ -5334,11 +6914,11 @@ Hash(object4) = key4；
       <tags>
         <tag>缓存穿透</tag>
         <tag>缓存雪崩</tag>
-        <tag>基础数据类型</tag>
         <tag>原理</tag>
+        <tag>基础数据类型</tag>
         <tag>主从架构</tag>
-        <tag>redis</tag>
         <tag>读书笔记</tag>
+        <tag>redis</tag>
       </tags>
   </entry>
   <entry>
@@ -5860,9 +7440,9 @@ zset-max-ziplist-value 64
         <category>操作系统</category>
       </categories>
       <tags>
-        <tag>Linux</tag>
-        <tag>操作系统</tag>
         <tag>原理</tag>
+        <tag>操作系统</tag>
+        <tag>Linux</tag>
       </tags>
   </entry>
   <entry>
@@ -5931,8 +7511,8 @@ zset-max-ziplist-value 64
         <category>Java基础</category>
       </categories>
       <tags>
-        <tag>动态代理</tag>
         <tag>代理模式</tag>
+        <tag>动态代理</tag>
       </tags>
   </entry>
   <entry>
@@ -9007,8 +10587,8 @@ zset-max-ziplist-value 64
         <category>操作系统</category>
       </categories>
       <tags>
-        <tag>Linux</tag>
         <tag>操作系统</tag>
+        <tag>Linux</tag>
         <tag>启动盘</tag>
       </tags>
   </entry>
@@ -9073,8 +10653,8 @@ zset-max-ziplist-value 64
       </categories>
       <tags>
         <tag>踩坑指南</tag>
-        <tag>Linux</tag>
         <tag>操作系统</tag>
+        <tag>Linux</tag>
         <tag>服务器</tag>
       </tags>
   </entry>
@@ -9438,8 +11018,8 @@ zset-max-ziplist-value 64
         <category>代码工具</category>
       </categories>
       <tags>
-        <tag>lombok</tag>
         <tag>plugin</tag>
+        <tag>lombok</tag>
       </tags>
   </entry>
   <entry>
@@ -9711,8 +11291,8 @@ model支持Builder模式</p>
       <tags>
         <tag>框架</tag>
         <tag>mybatis</tag>
-        <tag>使用手册</tag>
         <tag>plugin</tag>
+        <tag>使用手册</tag>
       </tags>
   </entry>
   <entry>
