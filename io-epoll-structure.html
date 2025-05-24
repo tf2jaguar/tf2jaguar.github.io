@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="不管是从事前端开发人员还是后端开发人员，他们在部署服务时，第一个想到的就是用Nginx做代理和静态资源缓存，因为Nginx经过千锤百炼，足以应对百万并发。 但是对于Nginx这种高效web服务，它底层到底有什么神秘武器支持大流量并发呢？答案就在epoll里面。 1. epoll 数据结构 + 算法">
+<meta property="og:type" content="article">
+<meta property="og:title" content="epoll数据结构">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/io-epoll-structure.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="不管是从事前端开发人员还是后端开发人员，他们在部署服务时，第一个想到的就是用Nginx做代理和静态资源缓存，因为Nginx经过千锤百炼，足以应对百万并发。 但是对于Nginx这种高效web服务，它底层到底有什么神秘武器支持大流量并发呢？答案就在epoll里面。 1. epoll 数据结构 + 算法">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b483f684-5649-11ec-907e-fa163eb4f6be.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b4d7bf3a-5649-11ec-907e-fa163eb4f6be.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b4ea9f9c-5649-11ec-907e-fa163eb4f6be.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b51d50f4-5649-11ec-907e-fa163eb4f6be.png">
+<meta property="article:published_time" content="2022-03-15T09:55:20.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.467Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="IO">
+<meta property="article:tag" content="IO多路复用">
+<meta property="article:tag" content="数据结构">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b483f684-5649-11ec-907e-fa163eb4f6be.png">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/io-epoll-structure.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/io-epoll-structure.html","path":"io-epoll-structure.html","title":"epoll数据结构"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>epoll数据结构 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-epoll-%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84-%E7%AE%97%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">1. epoll 数据结构 + 算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%9B%91%E8%A7%86socket%E7%B4%A2%E5%BC%95-%E7%BA%A2%E9%BB%91%E6%A0%91"><span class="nav-number">2.</span> <span class="nav-text">2. 监视socket索引-红黑树</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%B0%B1%E7%BB%AAsocket%E5%88%97%E8%A1%A8-%E5%8F%8C%E5%90%91%E9%93%BE%E8%A1%A8"><span class="nav-number">3.</span> <span class="nav-text">3. 就绪socket列表-双向链表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E4%B8%89%E4%B8%AAAPI"><span class="nav-number">4.</span> <span class="nav-text">4. 三个API</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-int-epoll-create-int-size"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 int epoll_create(int size)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-int-epoll-ctl-int-epfd%EF%BC%8C-int-op%EF%BC%8C-int-fd%EF%BC%8C-struct-epoll-event-event"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 int epoll_ctl(int epfd， int op， int fd， struct epoll_event *event)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-3-int-epoll-wait-int-epfd%EF%BC%8C-struct-epoll-event-events%EF%BC%8C-int-maxevents%EF%BC%8C-int-timeout"><span class="nav-number">4.3.</span> <span class="nav-text">4.3 int epoll_wait(int epfd， struct epoll_event *events， int maxevents， int timeout);</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-4-%E5%B0%8F%E7%BB%93"><span class="nav-number">4.4.</span> <span class="nav-text">4.4 小结</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%AE%9E%E7%8E%B0%E7%BB%86%E8%8A%82"><span class="nav-number">5.</span> <span class="nav-text">5. 实现细节</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-%E6%95%B4%E4%B8%AANginx-epoll%E6%B5%81%E7%A8%8B"><span class="nav-number">6.</span> <span class="nav-text">6. 整个Nginx epoll流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-epoll%E6%9B%B4%E9%AB%98%E6%95%88%E7%9A%84%E5%8E%9F%E5%9B%A0"><span class="nav-number">7.</span> <span class="nav-text">7. epoll更高效的原因</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-%E6%80%BB%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">8. 总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/io-epoll-structure.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="epoll数据结构 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          epoll数据结构
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-15 17:55:20" itemprop="dateCreated datePublished" datetime="2022-03-15T17:55:20+08:00">2022-03-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/IO%E6%A8%A1%E5%9E%8B/" itemprop="url" rel="index"><span itemprop="name">IO模型</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/io-epoll-structure.html" class="post-meta-item leancloud_visitors" data-flag-title="epoll数据结构" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>3.3k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>3 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>不管是从事前端开发人员还是后端开发人员，他们在部署服务时，第一个想到的就是用Nginx做代理和静态资源缓存，因为Nginx经过千锤百炼，足以应对百万并发。</p>
+<p>但是对于Nginx这种高效web服务，它底层到底有什么神秘武器支持大流量并发呢？答案就在<code>epoll</code><br>里面。</p>
+<h2 id="1-epoll-数据结构-算法"><a href="#1-epoll-数据结构-算法" class="headerlink" title="1. epoll 数据结构 + 算法"></a>1. epoll 数据结构 + 算法<span id="more"></span></h2><img data-src="../images/pic/epoll数据结构/modb_20211206_b483f684-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>epoll 的核心数据结构是：1个<code>红黑树</code> 和1个<code>双向链表</code><br>。还有<code>3个核心API</code><br>。如上图所示。</p>
+<h2 id="2-监视socket索引-红黑树"><a href="#2-监视socket索引-红黑树" class="headerlink" title="2. 监视socket索引-红黑树"></a>2. 监视socket索引-红黑树</h2><p>为什么采用红黑树呢？因为和epoll的工作机制有关。epoll在添加一个socket或者删除一个socket或者修改一个socket的时候，它需要查询速度更快，操作效率最高，因此需要一个更加优秀的数据结构能够管理这些socket。</p>
+<p>我们想到的比如链表，数组，二叉搜索树，B+树等都无法满足要求，</p>
+<ul>
+<li><p>因为链表在查询，删除的时候毫无疑问时间复杂度是O(n)；</p>
+</li>
+<li><p>数组查询很快，但是删除和新增时间复杂度是O(n)；</p>
+</li>
+<li><p>二叉搜索树虽然查询效率是lgn，但是如果不是平衡的，那么就会退化为线性查找，复杂度直接来到O(n)；</p>
+</li>
+<li><p>B+树是平衡多路查找树，主要是通过降低树的高度来存储上亿级别的数据，但是它的应用场景是内存放不下的时候能够用最少的IO访问次数从磁盘获取数据。比如数据库聚簇索引，成百上千万的数据内存无法满足查找就需要到内存查找，而因为B+树层高很低，只需要几次磁盘IO就能获取数据到内存，所以在这种磁盘到内存访问上B+树更适合。</p>
+</li>
+</ul>
+<p>因为我们处理上万级的fd，它们本身的存储空间并不会很大，所以倾向于在内存中去实现管理，而红黑树是一种非常优秀的平衡树，它完全是在内存中操作，而且查找，删除和新增时间复杂度都是lgn，效率非常高，因此选择用红黑树实现epoll是最佳的选择。</p>
+<p>当然不选择用AVL树是因为红黑树是不符合AVL树的平衡条件的，红黑是用非严格的平衡来换取增删节点时候旋转次数的降低，任何不平衡都会在三次旋转之内解决；而AVL树是严格平衡树，在增加或者删除节点的时候，根据不同情况，旋转的次数比红黑树要多。所以红黑树的插入效率更高。</p>
+<h2 id="3-就绪socket列表-双向链表"><a href="#3-就绪socket列表-双向链表" class="headerlink" title="3. 就绪socket列表-双向链表"></a>3. 就绪socket列表-双向链表</h2><p>就绪列表存储的是就绪的socket，所以它应能够快速的插入数据。</p>
+<p>程序可能随时调用epoll_ctl添加监视socket，也可能随时删除。当删除时，若该socket已经存放在就绪列表中，它也应该被移除。（事实上，每个epoll_item既是红黑树节点，也是链表节点，删除红黑树节点，自然删除了链表节点）</p>
+<p>所以就绪列表应是一种能够快速插入和删除的数据结构。双向链表就是这样一种数据结构，epoll使用<code>双向链表来实现就绪队列</code>  （rdllist）</p>
+<h2 id="4-三个API"><a href="#4-三个API" class="headerlink" title="4. 三个API"></a>4. 三个API</h2><h3 id="4-1-int-epoll-create-int-size"><a href="#4-1-int-epoll-create-int-size" class="headerlink" title="4.1 int epoll_create(int size)"></a>4.1 int epoll_create(int size)</h3><p>功能：</p>
+<p>内核会产生一个epoll 实例数据结构并返回一个文件描述符epfd，这个特殊的描述符就是epoll实例的句柄，后面的两个接口都以它为中心。同时也会创建红黑树和就绪列表，红黑树来管理注册fd，就绪列表来收集所有就绪fd。size参数表示所要监视文件描述符的最大值，不过在后来的Linux版本中已经被弃用（同时，size不要传0，会报invalid argument错误）</p>
+<h3 id="4-2-int-epoll-ctl-int-epfd，-int-op，-int-fd，-struct-epoll-event-event"><a href="#4-2-int-epoll-ctl-int-epfd，-int-op，-int-fd，-struct-epoll-event-event" class="headerlink" title="4.2 int epoll_ctl(int epfd， int op， int fd， struct epoll_event *event)"></a>4.2 int epoll_ctl(int epfd， int op， int fd， struct epoll_event *event)</h3><p>功能：</p>
+<p>将被监听的socket文件描述符添加到红黑树或从红黑树中删除或者对监听事件进行修改；同时向内核中断处理程序注册一个回调函数，内核在检测到某文件描述符可读&#x2F;可写时会调用回调函数，该回调函数将文件描述符放在就绪链表中。</p>
+<h3 id="4-3-int-epoll-wait-int-epfd，-struct-epoll-event-events，-int-maxevents，-int-timeout"><a href="#4-3-int-epoll-wait-int-epfd，-struct-epoll-event-events，-int-maxevents，-int-timeout" class="headerlink" title="4.3 int epoll_wait(int epfd， struct epoll_event *events， int maxevents， int timeout);"></a>4.3 int epoll_wait(int epfd， struct epoll_event *events， int maxevents， int timeout);</h3><p>功能：</p>
+<p>阻塞等待注册的事件发生，返回事件的数目，并将触发的事件写入events数组中。</p>
+<p>events: 用来记录被触发的events，其大小应该和maxevents一致</p>
+<p>maxevents: 返回的events的最大个数处于ready状态的那些文件描述符会被复制进ready list中，epoll_wait用于向用户进程返回ready list(就绪列表)。</p>
+<p>events和maxevents两个参数描述一个由用户分配的struct epoll event数组，调用返回时，内核将就绪列表(双向链表)复制到这个数组中，并将实际复制的个数作为返回值。</p>
+<p>注意，如果就绪列表比maxevents长，则只能复制前maxevents个成员；反之，则能够完全复制就绪列表。</p>
+<p>另外，struct epoll event结构中的events域在这里的解释是：<code>在被监测的文件描述符上实际发生的事件</code>  </p>
+<h3 id="4-4-小结"><a href="#4-4-小结" class="headerlink" title="4.4 小结"></a>4.4 小结</h3><p>调用epoll_create时，在内核cache里建了个<code>红黑树</code><br>用于存储以后epoll_ctl传来的socket外，还会再建立一个list链表，用于存储准备就绪的事件。</p>
+<p>当epoll_wait调用时，仅仅观察这个双向链表里有没有数据即可。有数据就返回，没有数据就sleep，等到timeout时间到后即使链表没数据也返回。所以，epoll_wait非常高效。而且，通常情况下即使我们要监控百万计的句柄，大多一次也只返回很少量的准备就绪句柄而已，所以，epoll_wait仅需要从内核态copy少量的句柄到用户态而已。</p>
+<h2 id="5-实现细节"><a href="#5-实现细节" class="headerlink" title="5. 实现细节"></a>5. 实现细节</h2><p><img data-src="/../images/pic/epoll%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/modb_20211206_b4d7bf3a-5649-11ec-907e-fa163eb4f6be.png"></p>
+<p>linux采用eventpoll数据结构来管理epoll，红黑树每个节点用epitime数据结构来管理，具体请参考linux3.16：eventpoll.c 和 eventpoll.h 主要位于fs&#x2F;eventpoll.c 和 include&#x2F;linux&#x2F;eventpool.h ，文章末尾源码连接也可以看哦。</p>
+<p>有了这两个核心数据结构之后，那么在处理事件和就绪队列的时候就会高效的多。</p>
+<h2 id="6-整个Nginx-epoll流程"><a href="#6-整个Nginx-epoll流程" class="headerlink" title="6. 整个Nginx epoll流程"></a>6. 整个Nginx epoll流程</h2><p>结合前几篇Nginx文章我们知道worker进程是最终处理请求的，因此事件循环在worker里面进行。核心主流程就是多个worker进程去竞争锁，拿到锁的worker进程注册文件描述符fd到epoll的红黑树中，然后worker进程在等待就绪fd的时候将自己挂起。等内核获取到中断信号之后会发起回调，将已经就绪的fd写入到双向链表，然后内核遍历链表将fd拷贝到用户口空间的event_list中，这样被挂起的worker进程就会被唤醒(之前阻塞在这里是因为没有fd就绪，现在数组有fd了，会换新进程)，通过遍历event_list执行fd相应事件的回调，这样请求就从worker进来，经过epoll处理之后将我们关心的fd事件通过回调的方式通知到Nginx，Nginx可以做进一步处理，最后也释放了锁。如下图：</p>
+<img data-src="../images/pic/epoll数据结构/modb_20211206_b4ea9f9c-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>源码地址在文章末尾哈。遍历就绪事件的核心处理逻辑是：ngx_epoll_process_events</p>
+<h2 id="7-epoll更高效的原因"><a href="#7-epoll更高效的原因" class="headerlink" title="7. epoll更高效的原因"></a>7. epoll更高效的原因</h2><p>有人说epoll使用了mmap，我找了源码半天没有找到，真的想打人。根据以上分析，epoll_ctl注册fd到红黑树拷贝一次，然后从就绪队列拷贝少量的fd到数组中又是一次拷贝，整体而言拷贝比较少(因为活跃的比较少，遇到大量活跃的可能性能就比较差了)。再加上少量轮循就可以处理就绪fd，所以效率非常高。</p>
+<h2 id="8-总结"><a href="#8-总结" class="headerlink" title="8. 总结"></a>8. 总结</h2><img data-src="../images/pic/epoll数据结构/modb_20211206_b51d50f4-5649-11ec-907e-fa163eb4f6be.png" style="zoom:45%;" />
+
+<p>参考：所有相关提到的数据结构可以在源码中找到，因为贴出来篇幅太大，所以把地址放到这里，供大家参考：</p>
+<p><a target="_blank" rel="noopener" href="https://www.kancloud.cn/digest/understandingnginx/202601">https://www.kancloud.cn/digest/understandingnginx/202601</a></p>
+<p><a target="_blank" rel="noopener" href="https://xie.infoq.cn/article/2ee961483c66a146709e7e861">https://xie.infoq.cn/article/2ee961483c66a146709e7e861</a></p>
+<p><a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1805838">https://cloud.tencent.com/developer/article/1805838</a></p>
+<p><a target="_blank" rel="noopener" href="https://xie.infoq.cn/article/1a956ec3827587c2618d0a4b2">https://xie.infoq.cn/article/1a956ec3827587c2618d0a4b2</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/io-epoll-structure.html" title="epoll数据结构">https://tf2jaguar.dpdns.org/io-epoll-structure.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/IO/" rel="tag"><i class="fa fa-tag"></i> IO</a>
+              <a href="/tags/IO%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8/" rel="tag"><i class="fa fa-tag"></i> IO多路复用</a>
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" rel="tag"><i class="fa fa-tag"></i> 数据结构</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/net-protocol-tcp.html" rel="prev" title="TCP协议灵魂之问">
+                  <i class="fa fa-chevron-left"></i> TCP协议灵魂之问
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/mysql-speciality.html" rel="next" title="mysql部分特性">
+                  mysql部分特性 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

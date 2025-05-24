@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="项目的工具包，以功能分包，功能之间尽量减少相互依赖，每个功能作为最小单元供服务依赖。Try to reduce mutual dependence between functions and functions. Each function is used as the minimum unit for service dependencies. 具备的能力 交互协议封装。具有统一的出参、入参标准">
+<meta property="og:type" content="article">
+<meta property="og:title" content="microcosm-SpringBoot工具包">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/project-microcosm.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="项目的工具包，以功能分包，功能之间尽量减少相互依赖，每个功能作为最小单元供服务依赖。Try to reduce mutual dependence between functions and functions. Each function is used as the minimum unit for service dependencies. 具备的能力 交互协议封装。具有统一的出参、入参标准">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-12-25T12:10:27.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.480Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="springboot">
+<meta property="article:tag" content="工具包">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/project-microcosm.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/project-microcosm.html","path":"project-microcosm.html","title":"microcosm-SpringBoot工具包"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>microcosm-SpringBoot工具包 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B7%E5%A4%87%E7%9A%84%E8%83%BD%E5%8A%9B"><span class="nav-number">1.</span> <span class="nav-text">具备的能力</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AE%B2%E5%9C%A8%E5%89%8D%E8%BE%B9"><span class="nav-number">2.</span> <span class="nav-text">讲在前边</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E6%95%99%E7%A8%8B"><span class="nav-number"></span> <span class="nav-text">使用教程</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%88%B6%E7%89%88%E6%9C%AC%E6%B7%BB%E5%8A%A0%E7%89%88%E6%9C%AC%E6%8E%A7%E5%88%B6"><span class="nav-number">1.</span> <span class="nav-text">父版本添加版本控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#api%E6%A8%A1%E5%9D%97%E5%A2%9E%E5%8A%A0%E4%BE%9D%E8%B5%96"><span class="nav-number">2.</span> <span class="nav-text">api模块增加依赖</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%A8%A1%E5%9D%97%E4%BE%9D%E8%B5%96"><span class="nav-number">2.1.</span> <span class="nav-text">配置模块依赖</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E5%AE%9A%E4%B9%89%E6%9C%8D%E5%8A%A1%E5%BC%82%E5%B8%B8%E6%9E%9A%E4%B8%BE"><span class="nav-number">3.</span> <span class="nav-text">自定义服务异常枚举</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#common%E6%A8%A1%E5%9D%97%E5%A2%9E%E5%8A%A0%E4%BE%9D%E8%B5%96"><span class="nav-number">4.</span> <span class="nav-text">common模块增加依赖</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%A8%A1%E5%9D%97%E4%BE%9D%E8%B5%96-1"><span class="nav-number">4.1.</span> <span class="nav-text">配置模块依赖</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#main%E6%A8%A1%E5%9D%97%E6%B7%BB%E5%8A%A0%E4%BE%9D%E8%B5%96"><span class="nav-number">5.</span> <span class="nav-text">main模块添加依赖</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%85%8D%E7%BD%AE%E6%A8%A1%E5%9D%97%E4%BE%9D%E8%B5%96-2"><span class="nav-number">5.1.</span> <span class="nav-text">配置模块依赖</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8F%91%E7%89%88%E6%97%A5%E5%8E%86"><span class="nav-number"></span> <span class="nav-text">发版日历</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9C%80%E6%96%B0%E7%89%88%E6%9C%AC"><span class="nav-number">1.</span> <span class="nav-text">最新版本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E6%97%A5%E5%8E%86"><span class="nav-number">2.</span> <span class="nav-text">更新日历</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-3-RELEASE"><span class="nav-number">2.1.</span> <span class="nav-text">1.1.3.RELEASE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-2-RELEASE"><span class="nav-number">2.2.</span> <span class="nav-text">1.1.2.RELEASE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-1-RELEASE"><span class="nav-number">2.3.</span> <span class="nav-text">1.1.1.RELEASE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-0-RELEASE"><span class="nav-number">2.4.</span> <span class="nav-text">1.1.0.RELEASE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-0-1-RELEASE"><span class="nav-number">2.5.</span> <span class="nav-text">1.0.1.RELEASE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-0-0-RELEASE"><span class="nav-number">2.6.</span> <span class="nav-text">1.0.0.RELEASE</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%90%84%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE"><span class="nav-number"></span> <span class="nav-text">各模块使用建议</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-logging"><span class="nav-number">1.</span> <span class="nav-text">micro-logging</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE"><span class="nav-number">1.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-apollo"><span class="nav-number">2.</span> <span class="nav-text">micro-apollo</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-1"><span class="nav-number">2.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-qconf"><span class="nav-number">3.</span> <span class="nav-text">micro-qconf</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-2"><span class="nav-number">3.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-distribute"><span class="nav-number">4.</span> <span class="nav-text">micro-distribute</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-3"><span class="nav-number">4.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-core"><span class="nav-number">5.</span> <span class="nav-text">micro-core</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-4"><span class="nav-number">5.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-codec"><span class="nav-number">6.</span> <span class="nav-text">micro-codec</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-5"><span class="nav-number">6.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-except"><span class="nav-number">7.</span> <span class="nav-text">micro-except</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-6"><span class="nav-number">7.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#micro-mybatis-plus"><span class="nav-number">8.</span> <span class="nav-text">micro-mybatis-plus</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE-7"><span class="nav-number">8.1.</span> <span class="nav-text">使用建议</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/project-microcosm.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="microcosm-SpringBoot工具包 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          microcosm-SpringBoot工具包
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-12-25 20:10:27" itemprop="dateCreated datePublished" datetime="2022-12-25T20:10:27+08:00">2022-12-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E9%A1%B9%E7%9B%AE%E4%BB%8B%E7%BB%8D/" itemprop="url" rel="index"><span itemprop="name">项目介绍</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/project-microcosm.html" class="post-meta-item leancloud_visitors" data-flag-title="microcosm-SpringBoot工具包" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <p>项目的工具包，以功能分包，功能之间尽量减少相互依赖，每个功能作为最小单元供服务依赖。<br>Try to reduce mutual dependence between functions and functions. Each function is used as the minimum unit for service dependencies.</p>
+<h2 id="具备的能力"><a href="#具备的能力" class="headerlink" title="具备的能力"></a>具备的能力</h2><ol>
+<li>交互协议封装。具有统一的出参、入参标准<span id="more"></span></li>
+<li>规范日志打印格式和分类收集。统一日志打印格式，适配tomcat日志、nginx日志、接口日志、异常日志以及普通日志</li>
+<li>全局异常捕获处理，同时具备针对特定业务的异常 BusinessException 不打印error日志，只返回接口错误。以及服务级别异常 ServerException 打印error日志，返回接口错误，可配合告警平台做告警通知</li>
+<li>具备适配 Apollo 功能，可在 Apollo 变更后自动刷新内存，可解决 properties、configurationProperties 导致的 Apollo 不刷新问题</li>
+<li>具备适配 qconf、mybatis-plus 等能力，均可跟进需要引入各自组件的 pom 文件即可</li>
+</ol>
+<p>参考文尾的 <a href="#%E5%90%84%E6%A8%A1%E5%9D%97%E4%BD%BF%E7%94%A8%E5%BB%BA%E8%AE%AE">各模块使用建议</a></p>
+<h2 id="讲在前边"><a href="#讲在前边" class="headerlink" title="讲在前边"></a>讲在前边</h2><ol>
+<li>这个项目只是对 <code>spring-boot</code> 类的项目的一些增强，如果你的项目不是用 <code>spring-boot</code> 开发的，那么它对你的用处可能没有那么大</li>
+<li>本指导用例依据个人开发习惯编写而成，项目结构参考另一个脚手架项目 <a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/dust.git">dust</a></li>
+<li><em>无论在什么情况下，我都会倾听你的意见并对项目做出改进</em></li>
+</ol>
+<h1 id="使用教程"><a href="#使用教程" class="headerlink" title="使用教程"></a>使用教程</h1><p>参考: <a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/blob/main/GUIDELINE.md">guideline</a></p>
+<h2 id="父版本添加版本控制"><a href="#父版本添加版本控制" class="headerlink" title="父版本添加版本控制"></a>父版本添加版本控制</h2><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">properties</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">last-vision</span>&gt;</span>最新版本(参考本文的发版历史)<span class="tag">&lt;/<span class="name">last-vision</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">properties</span>&gt;</span></span><br><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencyManagement</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- microcosm start --&gt;</span></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-logging<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-apollo<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-qconf<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-distribute<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">      </span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-codec<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-except<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">      </span><br><span class="line">      <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-micro-mybatis-plus<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">version</span>&gt;</span>$&#123;revision&#125;<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span><br><span class="line">      <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line">      <span class="comment">&lt;!-- microcosm end --&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencyManagement</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="api模块增加依赖"><a href="#api模块增加依赖" class="headerlink" title="api模块增加依赖"></a>api模块增加依赖</h2><p>这里主要增加一些核心类库，包括但不限于出入参数封装 <a href="micro-core/src/main/java/io/github/micro/core/input/InputMessage.java">InputMessage</a>, <a href="micro-core/src/main/java/io/github/micro/core/output/OutputMessage.java">OutputMessage</a>,<br>服务异常 <a href="micro-core/src/main/java/io/github/micro/core/error/ServerException.java">ServerException</a>,<br>业务异常 <a href="micro-core/src/main/java/io/github/micro/core/error/BusinessException.java">BusinessException</a>，<br>核心异常枚举 <a href="micro-core/src/main/java/io/github/micro/core/error/ErrorEnums.java">ErrorEnums</a></p>
+<h3 id="配置模块依赖"><a href="#配置模块依赖" class="headerlink" title="配置模块依赖"></a>配置模块依赖</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-core<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="自定义服务异常枚举"><a href="#自定义服务异常枚举" class="headerlink" title="自定义服务异常枚举"></a>自定义服务异常枚举</h2><p>你可以通过实现 <code>ExceptionEnums</code> 接口，来定义自己的服务异常枚举，用来适配服务异常、业务异常。两种异常在统一异常捕获模块，会产生不一样的效果哦</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> <span class="title class_">GmmpErrorCodes</span> <span class="keyword">implements</span> <span class="title class_">ExceptionEnums</span> &#123;</span><br><span class="line">    <span class="comment">// 异常</span></span><br><span class="line">    INTERNAL_EXCEPT(<span class="number">10000</span>, <span class="string">&quot;系统内部异常&quot;</span>),</span><br><span class="line">    INVALID_SIGN(<span class="number">10001</span>, <span class="string">&quot;请求加密协议错误&quot;</span>),</span><br><span class="line">    INVALID_IP(<span class="number">10002</span>, <span class="string">&quot;请求IP地址异常&quot;</span>),</span><br><span class="line">    INVALID_DATA(<span class="number">10003</span>, <span class="string">&quot;数据错误&quot;</span>),</span><br><span class="line">    INVALID_PARAMS(<span class="number">10004</span>, <span class="string">&quot;参数错误&quot;</span>),</span><br><span class="line">    INVALID_CITY_ID(<span class="number">10005</span>, <span class="string">&quot;无效的城市编号&quot;</span>),</span><br><span class="line">    INVALID_ENTERPRISE_ID(<span class="number">10006</span>, <span class="string">&quot;无效的企业编号&quot;</span>),</span><br><span class="line">    <span class="comment">// …… 省略部分</span></span><br><span class="line">    ;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> code;</span><br><span class="line">    <span class="keyword">private</span> String message;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="type">int</span> <span class="variable">MODULE</span> <span class="operator">=</span> <span class="number">200</span>;</span><br><span class="line">    GmmpErrorCodes(<span class="type">int</span> code, String message) &#123;</span><br><span class="line">        <span class="built_in">this</span>.code = code;</span><br><span class="line">        <span class="built_in">this</span>.message = message;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">code</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">this</span>.code;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> String <span class="title function_">message</span><span class="params">()</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="built_in">this</span>.message;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="common模块增加依赖"><a href="#common模块增加依赖" class="headerlink" title="common模块增加依赖"></a>common模块增加依赖</h2><p>这个模块主要是通用能力的封装，包括但不限于调用第三方服务、通用工具类处理</p>
+<p>此处增加 出入参数封装依赖（qconf适配的依赖）</p>
+<h3 id="配置模块依赖-1"><a href="#配置模块依赖-1" class="headerlink" title="配置模块依赖"></a>配置模块依赖</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-codec<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<p>如果你的服务使用 <code>qconf</code> 而不是 <code>nacos</code> 进行服务发现，那么你还需要添加以下依赖</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-qconf<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="main模块添加依赖"><a href="#main模块添加依赖" class="headerlink" title="main模块添加依赖"></a>main模块添加依赖</h2><p>这个模块是整个服务的启动模块，是 <code>springboot</code> 项目的启动类所在的模块</p>
+<p>这里添加日志处理、apollo配置中心、统一异常捕获的依赖</p>
+<h3 id="配置模块依赖-2"><a href="#配置模块依赖-2" class="headerlink" title="配置模块依赖"></a>配置模块依赖</h3><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">dependencies</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-logging<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-apollo<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"></span><br><span class="line">    <span class="tag">&lt;<span class="name">dependency</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">groupId</span>&gt;</span>io.github.tf2jaguar.micro<span class="tag">&lt;/<span class="name">groupId</span>&gt;</span></span><br><span class="line">        <span class="tag">&lt;<span class="name">artifactId</span>&gt;</span>micro-except<span class="tag">&lt;/<span class="name">artifactId</span>&gt;</span></span><br><span class="line">    <span class="tag">&lt;/<span class="name">dependency</span>&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="name">dependencies</span>&gt;</span></span><br></pre></td></tr></table></figure>
+
+<h1 id="发版日历"><a href="#发版日历" class="headerlink" title="发版日历"></a>发版日历</h1><p>最新发版及调整参考: <a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/blob/main/VERSION.md">version</a></p>
+<h2 id="最新版本"><a href="#最新版本" class="headerlink" title="最新版本"></a>最新版本</h2><p><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.1.3.RELEASE">1.1.3.RELEASE</a></p>
+<h2 id="更新日历"><a href="#更新日历" class="headerlink" title="更新日历"></a>更新日历</h2><h3 id="1-1-3-RELEASE"><a href="#1-1-3-RELEASE" class="headerlink" title="1.1.3.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.1.3.RELEASE">1.1.3.RELEASE</a></h3><p>发布日期：<code>2022-06-16</code></p>
+<ol>
+<li>调整 logging 模块中追踪方法运行时间的开关以及日志打印级别</li>
+</ol>
+<h3 id="1-1-2-RELEASE"><a href="#1-1-2-RELEASE" class="headerlink" title="1.1.2.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.1.2.RELEASE">1.1.2.RELEASE</a></h3><p>发布日期：<code>2021-07-02</code></p>
+<ol>
+<li>修复 LogRecordAspect 日志问题</li>
+</ol>
+<h3 id="1-1-1-RELEASE"><a href="#1-1-1-RELEASE" class="headerlink" title="1.1.1.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.1.1.RELEASE">1.1.1.RELEASE</a></h3><p>发布日期：<code>2021-07-02</code></p>
+<ol>
+<li>修复 revision 重命名问题</li>
+</ol>
+<h3 id="1-1-0-RELEASE"><a href="#1-1-0-RELEASE" class="headerlink" title="1.1.0.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.1.0.RELEASE">1.1.0.RELEASE</a></h3><p>发布日期：<code>2021-07-01</code></p>
+<ol>
+<li>micro-core： 自定义服务异常枚举时实现 <code>ExceptionEnums</code> 如内置的常用异常状态枚举的实现方式 <code>public enum ErrorEnums implements ExceptionEnums</code>；封装了简单的分页请求入参和返回参数，封装了接口交互的出入参数格式类（通过 <code>micro-codec</code> 模块完成出入参数自动封装、解封装） </li>
+<li>micro-codec： 实现了对 <code>feign</code> 调用的出入参数驼峰转换；实现了对 <code>http</code> 调用出入参数驼峰转换，入参数 params 封装，出参数 <code>code、data、message</code> 封装；实现了对 <code>swagger</code> 展示中入参数、出参数封装</li>
+<li>micro-except： 实现类拦截服务异常 <code>ServerException</code>，打印error日志，返回接口错误 ；拦截业务异常 <code>BusinessException</code>，不打印error日志，只返回接口错误 ；拦截参数绑定异常 <code>BindException</code>，打印error日志，返回接口错误 ；拦截方法参数异常 <code>MethodArgumentNotValidException</code>，打印error日志，返回接口错误 ；拦截全局异常 <code>Exception</code>，打印error日志，返回接口错误</li>
+<li>增加mybatis-plus代码生成器模块</li>
+</ol>
+<h3 id="1-0-1-RELEASE"><a href="#1-0-1-RELEASE" class="headerlink" title="1.0.1.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.0.1.RELEASE">1.0.1.RELEASE</a></h3><p>发布日期：<code>2021-05-13</code></p>
+<ol>
+<li>调整pom依赖和 <a href="GUIDELINE.md">guideline</a></li>
+</ol>
+<h3 id="1-0-0-RELEASE"><a href="#1-0-0-RELEASE" class="headerlink" title="1.0.0.RELEASE"></a><a target="_blank" rel="noopener" href="https://github.com/tf2jaguar/microcosm/releases/tag/1.0.0.RELEASE">1.0.0.RELEASE</a></h3><p>发布日期：<code>2021-05-13</code></p>
+<ol>
+<li>micro-logging： 实现了统计经过 <code>http请求</code> 的出入参数记录，针对每个 <code>request</code> 的 <code>api日志</code> 用唯一的 <code>session_id</code> 进行区分；使用logback记录日志、记录 <code>all_log、error_log、api_log、access_log</code> 的日志并按照天做切分</li>
+<li>micro-apollo： 实现了对 <code>apollo</code> 配置变更自动刷新；实现了对 <code>apollo</code> 日志级别调整后自动刷新</li>
+<li>micro-qconf： 实现了从 <code>qconf</code> 中获取服务器列表，供给 <code>ribbon</code> 远程调用</li>
+<li>micro-distribute： 利用 Twitter 的 Snowflake 算法实现分布式ID</li>
+</ol>
+<h1 id="各模块使用建议"><a href="#各模块使用建议" class="headerlink" title="各模块使用建议"></a>各模块使用建议</h1><h2 id="micro-logging"><a href="#micro-logging" class="headerlink" title="micro-logging"></a>micro-logging</h2><h3 id="使用建议"><a href="#使用建议" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在启动模块中添加 <code>micro-logging</code> 模块的 pom 依赖</li>
+<li>针对 form表单提交、文件上传&#x2F;下载等接口，请通过spring-boot配置 <code>micro.logging.api.ignore=</code> 忽略日志打印</li>
+<li>实现了统计经过 <code>http请求</code> 的出入参数记录，针对每个 <code>request</code> 在日志中有唯一的 <code>session_id</code> 进行区分</li>
+<li>使用logback记录日志、记录 all_log、error_log、api_log、access_log 日志并按照天做切分</li>
+</ol>
+<h2 id="micro-apollo"><a href="#micro-apollo" class="headerlink" title="micro-apollo"></a>micro-apollo</h2><h3 id="使用建议-1"><a href="#使用建议-1" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在启动模块中添加 <code>micro-apollo</code> 模块的 pom 依赖</li>
+<li>实现了对 <code>apollo</code> 配置变更自动刷新</li>
+<li>实现了对 <code>apollo</code> 日志级别调整后自动刷新</li>
+</ol>
+<h2 id="micro-qconf"><a href="#micro-qconf" class="headerlink" title="micro-qconf"></a>micro-qconf</h2><h3 id="使用建议-2"><a href="#使用建议-2" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在进行 <code>feign</code> 调用的模块中添加 <code>micro-qconf</code> 模块的 pom 依赖</li>
+<li>实现了从 <code>qconf</code> 中获取服务器列表，供给 <code>ribbon</code> 远程调用</li>
+</ol>
+<h2 id="micro-distribute"><a href="#micro-distribute" class="headerlink" title="micro-distribute"></a>micro-distribute</h2><h3 id="使用建议-3"><a href="#使用建议-3" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在启动模块中添加 <code>micro-distribute</code> 模块的 pom 依赖</li>
+<li>服务集群部署，请通过 <code>micro.distribute.machine-list=</code> 指定当前机器集群（单机时无需配置，默认1），用来计算分布式id生成的机器id；</li>
+<li>服务部署在多个数据中心，请通过 <code>micro.distribute.data-center-id=</code> 指定当前数据中心id编号（单机时无需配置，默认1），用来计算分布式id生成的数据中心id</li>
+</ol>
+<h2 id="micro-core"><a href="#micro-core" class="headerlink" title="micro-core"></a>micro-core</h2><h3 id="使用建议-4"><a href="#使用建议-4" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在底层接口模块中添加 <code>micro-core</code> 模块的 pom 依赖</li>
+<li>自定义服务异常枚举时实现 <code>ExceptionEnums</code> 如内置的常用异常状态枚举的实现方式 <code>public enum ErrorEnums implements ExceptionEnums</code></li>
+<li>封装了简单的分页请求入参和返回参数</li>
+<li>封装了接口交互的出入参数格式类（通过 <code>micro-codec</code> 模块完成出入参数自动封装、解封装）</li>
+</ol>
+<h2 id="micro-codec"><a href="#micro-codec" class="headerlink" title="micro-codec"></a>micro-codec</h2><h3 id="使用建议-5"><a href="#使用建议-5" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在启动模块中添加 <code>micro-codec</code> 模块的 pom 依赖</li>
+<li>实现了对 <code>feign</code> 调用的出入参数驼峰转换</li>
+<li>实现了对 <code>http</code> 调用出入参数驼峰转换，入参数 <code>params</code> 封装，出参数 <code>code、data、message</code> 封装</li>
+<li>实现了对 <code>swagger</code> 展示中入参数、出参数封装</li>
+</ol>
+<h2 id="micro-except"><a href="#micro-except" class="headerlink" title="micro-except"></a>micro-except</h2><h3 id="使用建议-6"><a href="#使用建议-6" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>在启动模块中添加 <code>micro-except</code> 模块的 pom 依赖</li>
+<li>拦截服务异常 <code>ServerException</code> 打印error日志，返回接口错误</li>
+<li>拦截业务异常 <code>BusinessException</code> 不打印error日志，只返回接口错误</li>
+<li>拦截参数绑定异常 <code>BindException</code> 打印error日志，返回接口错误</li>
+<li>拦截方法参数异常 <code>MethodArgumentNotValidException</code> 打印error日志，返回接口错误</li>
+<li>拦截全局异常 <code>Exception</code> 打印error日志，返回接口错误</li>
+</ol>
+<h2 id="micro-mybatis-plus"><a href="#micro-mybatis-plus" class="headerlink" title="micro-mybatis-plus"></a>micro-mybatis-plus</h2><h3 id="使用建议-7"><a href="#使用建议-7" class="headerlink" title="使用建议"></a>使用建议</h3><ol>
+<li>使用其生成基础实体类等</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/project-microcosm.html" title="microcosm-SpringBoot工具包">https://tf2jaguar.dpdns.org/project-microcosm.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/springboot/" rel="tag"><i class="fa fa-tag"></i> springboot</a>
+              <a href="/tags/%E5%B7%A5%E5%85%B7%E5%8C%85/" rel="tag"><i class="fa fa-tag"></i> 工具包</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/srping-extension-point.html" rel="prev" title="spring中常用的11个扩展点">
+                  <i class="fa fa-chevron-left"></i> spring中常用的11个扩展点
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/sh601888-20230707.html" rel="next" title="中国中免-20230707分析">
+                  中国中免-20230707分析 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

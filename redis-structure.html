@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Redis 内部数据结构 RdeisDb redisObject 编码类型 字符串 raw 编码 字符串 embstr 编码">
+<meta property="og:type" content="article">
+<meta property="og:title" content="redis基础数据结构">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/redis-structure.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="Redis 内部数据结构 RdeisDb redisObject 编码类型 字符串 raw 编码 字符串 embstr 编码">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx6AUzW7AACuWHuW1yQ159.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28Bx6Adu3BAABepkFcPWs950.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx6AVwGxAAEKF2oxItk727.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228112917616.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228213902420.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201229121012437.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228105945950.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28Bx6ALgQTAADi0ZMSOiA596.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx-ADosGAACskc5wrBU688.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28Bx-AEW-LAABgCctayIw793.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx-ARu4ZAACk1VRWcR4166.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28Bx-ACG0jAAB7HSDeUSg826.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx-AY9k6AACHwHJEeWc739.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28Bx-AHq20AABn2LByDio271.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28ByCADkuqAACua3XXug4030.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28ByCAWS7-AADDdAI6Jok848.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28ByCASkZeAADPgl0yXtk817.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgotOV28ByCAIhL8AAEZ-o72tpY715.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.png">
+<meta property="article:published_time" content="2022-03-22T07:44:33.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.481Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="数据结构">
+<meta property="article:tag" content="redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/CgoB5l28Bx6AUzW7AACuWHuW1yQ159.png">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/redis-structure.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/redis-structure.html","path":"redis-structure.html","title":"redis基础数据结构"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>redis基础数据结构 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis-%E5%86%85%E9%83%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84"><span class="nav-number">1.</span> <span class="nav-text">Redis 内部数据结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#RdeisDb"><span class="nav-number">1.1.</span> <span class="nav-text">RdeisDb</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#redisObject"><span class="nav-number">1.2.</span> <span class="nav-text">redisObject</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E7%A0%81%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.3.</span> <span class="nav-text">编码类型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-raw-%E7%BC%96%E7%A0%81"><span class="nav-number">1.3.1.</span> <span class="nav-text">字符串 raw 编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-embstr-%E7%BC%96%E7%A0%81"><span class="nav-number">1.3.2.</span> <span class="nav-text">字符串 embstr 编码</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-int-%E7%BC%96%E7%A0%81"><span class="nav-number">1.3.3.</span> <span class="nav-text">字符串 int 编码</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E7%A0%81%E7%9A%84%E8%BD%AC%E6%8D%A2"><span class="nav-number">1.4.</span> <span class="nav-text">编码的转换</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#int-%E8%BD%AC-raw"><span class="nav-number">1.4.1.</span> <span class="nav-text">int 转 raw</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#embstr-%E8%BD%AC-raw"><span class="nav-number">1.4.2.</span> <span class="nav-text">embstr 转 raw</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#dict"><span class="nav-number">1.5.</span> <span class="nav-text">dict</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#sds"><span class="nav-number">1.6.</span> <span class="nav-text">sds</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#ziplist"><span class="nav-number">1.7.</span> <span class="nav-text">ziplist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#quicklist"><span class="nav-number">1.8.</span> <span class="nav-text">quicklist</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#zskiplist"><span class="nav-number">1.9.</span> <span class="nav-text">zskiplist</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%85%AB%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%AF%B9%E5%BA%94%E7%9A%84%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">八种数据类型对应的内部结构</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/redis-structure.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="redis基础数据结构 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          redis基础数据结构
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-22 15:44:33" itemprop="dateCreated datePublished" datetime="2022-03-22T15:44:33+08:00">2022-03-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/redis%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">redis数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/redis-structure.html" class="post-meta-item leancloud_visitors" data-flag-title="redis基础数据结构" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7.8k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>7 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <ul>
+<li><a href="#redis-%E5%86%85%E9%83%A8%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84">Redis 内部数据结构</a><ul>
+<li><a href="#rdeisdb">RdeisDb</a></li>
+<li><a href="#redisobject">redisObject</a></li>
+<li><a href="#%E7%BC%96%E7%A0%81%E7%B1%BB%E5%9E%8B">编码类型</a><ul>
+<li><a href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-raw-%E7%BC%96%E7%A0%81">字符串 raw 编码</a></li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-embstr-%E7%BC%96%E7%A0%81">字符串 embstr 编码</a><span id="more"></span></li>
+<li><a href="#%E5%AD%97%E7%AC%A6%E4%B8%B2-int-%E7%BC%96%E7%A0%81">字符串 int 编码</a></li>
+</ul>
+</li>
+<li><a href="#%E7%BC%96%E7%A0%81%E7%9A%84%E8%BD%AC%E6%8D%A2">编码的转换</a><ul>
+<li><a href="#int-%E8%BD%AC-raw">int 转 raw</a></li>
+<li><a href="#embstr-%E8%BD%AC-raw">embstr 转 raw</a></li>
+</ul>
+</li>
+<li><a href="#dict">dict</a></li>
+<li><a href="#sds">sds</a></li>
+<li><a href="#ziplist">ziplist</a></li>
+<li><a href="#quicklist">quicklist</a></li>
+<li><a href="#zskiplist">zskiplist</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%AB%E7%A7%8D%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%AF%B9%E5%BA%94%E7%9A%84%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84">八种数据类型对应的内部结构</a></li>
+<li><a href="#%E6%80%BB%E7%BB%93">总结</a></li>
+</ul>
+<h1 id="Redis-内部数据结构"><a href="#Redis-内部数据结构" class="headerlink" title="Redis 内部数据结构"></a>Redis 内部数据结构</h1><h2 id="RdeisDb"><a href="#RdeisDb" class="headerlink" title="RdeisDb"></a>RdeisDb</h2><img data-src="../images/pic/redis基础数据结构/CgoB5l28Bx6AUzW7AACuWHuW1yQ159.png" >
+
+<p>Redis 中所有数据都保存在 DB 中，一个 Redis 默认最多支持 16 个 DB。Redis 中的每个 DB 都对应一个 redisDb 结构，即每个 Redis 实例，默认有 16 个 redisDb。用户访问时，默认使用的是 0 号 DB，可以通过 select $dbID 在不同 DB 之间切换。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28Bx6Adu3BAABepkFcPWs950.png" >
+
+<p>redisDb 主要包括 2 个核心 dict 字典、3 个非核心 dict 字典、dbID 和其他辅助属性。2 个核心 dict 包括一个 dict 主字典和一个 expires 过期字典。主 dict 字典用来存储当前 DB 中的所有数据，它将 key 和各种数据类型的 value 关联起来，该 dict 也称 key space。过期字典用来存储过期时间 key，存的是 key 与过期时间的映射。日常的数据存储和访问基本都会访问到 redisDb 中的这两个 dict。</p>
+<p>3 个非核心 dict 包括一个字段名叫 blocking_keys 的阻塞 dict，一个字段名叫 ready_keys 的解除阻塞 dict，还有一个是字段名叫 watched_keys 的 watch 监控 dict。</p>
+<p>在执行 Redis 中 list 的阻塞命令 blpop、brpop 或者 brpoplpush 时，如果对应的 list 列表为空，Redis 就会将对应的 client 设为阻塞状态，同时将该 client 添加到 DB 中 blocking_keys 这个阻塞 dict。所以该 dict 存储的是处于阻塞状态的 key 及 client 列表。</p>
+<p>当有其他调用方在向某个 key 对应的 list 中增加元素时，Redis 会检测是否有 client 阻塞在这个 key 上，即检查 blocking_keys 中是否包含这个 key，如果有则会将这个 key 加入 read_keys 这个 dict 中。同时也会将这个 key 保存到 server 中的一个名叫 read_keys 的列表中。这样可以高效、不重复的插入及轮询。</p>
+<p>当 client 使用 watch 指令来监控 key 时，这个 key 和 client 就会被保存到 watched_keys 这个 dict 中。redisDb 中可以保存所有的数据类型，而 Redis 中所有数据类型都是存放在一个叫 redisObject 的结构中。</p>
+<h2 id="redisObject"><a href="#redisObject" class="headerlink" title="redisObject"></a>redisObject</h2><img data-src="../images/pic/redis基础数据结构/CgoB5l28Bx6AVwGxAAEKF2oxItk727.png" >
+
+<p> &amp;nbsp; &amp;nbsp; &amp;nbsp; </p>
+<p>redisObject 由 5 个字段组成。</p>
+<ul>
+<li><p>type：即 Redis 对象的数据类型，目前支持 7 种 type 类型，分别为 </p>
+<ul>
+<li><p>OBJ_STRING</p>
+</li>
+<li><p>OBJ_LIST</p>
+</li>
+<li><p>OBJ_SET</p>
+</li>
+<li><p>OBJ_ZSET</p>
+</li>
+<li><p>OBJ_HASH</p>
+</li>
+<li><p>OBJ_MODULE </p>
+</li>
+<li><p>OBJ_STREAM</p>
+</li>
+</ul>
+</li>
+<li><p>encoding：Redis 对象的内部编码方式，即内部数据结构类型，目前支持 10 种编码方式包括 </p>
+<ul>
+<li><p>OBJ_ENCODING_RAW</p>
+</li>
+<li><p>OBJ_ENCODING_INT</p>
+</li>
+<li><p>OBJ_ENCODING_HT</p>
+</li>
+<li><p>OBJ_ENCODING_ZIPLIST 等。</p>
+</li>
+</ul>
+</li>
+<li><p>LRU：存储的是淘汰数据用的 LRU 时间或 LFU 频率及时间的数据。</p>
+</li>
+<li><p>refcount：记录 Redis 对象的引用计数，用来表示对象被共享的次数，共享使用时加 1，不再使用时减 1，当计数为 0 时表明该对象没有被使用，就会被释放，回收内存。</p>
+</li>
+<li><p>ptr：它指向对象的内部数据结构。比如一个代表 string 的对象，它的 ptr 可能指向一个 sds 或者一个 long 型整数。</p>
+</li>
+</ul>
+<h2 id="编码类型"><a href="#编码类型" class="headerlink" title="编码类型"></a>编码类型</h2><p>Redis 各类型都会封装成 <code>RedisObject</code>，不同数据类型的主要区别就是 <code>type</code> 和 <code>encoding</code> 属性的差异，同一种数据类型，有不同的编码。</p>
+<table>
+<thead>
+<tr>
+<th align="center">基础数据类型</th>
+<th align="center">可能的编码方式</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">字符串</td>
+<td align="center">int, raw, embstr</td>
+</tr>
+<tr>
+<td align="center">列表</td>
+<td align="center">之前是 ziplist, linkedlist。3.2开始都是quicklist</td>
+</tr>
+<tr>
+<td align="center">集合</td>
+<td align="center">intset, hashtable</td>
+</tr>
+<tr>
+<td align="center">有序集合</td>
+<td align="center">ziplist, skiplist</td>
+</tr>
+<tr>
+<td align="center">散列</td>
+<td align="center">ziplist, hashtable</td>
+</tr>
+</tbody></table>
+<p>字符串的编码有<code>raw</code>、<code>embstr</code>、<code>int</code>三种。</p>
+<ul>
+<li><code>raw</code> 用于长字符串。</li>
+<li><code>embstr</code> 用于短字符串。</li>
+<li><code>int</code> 用于整数类型。</li>
+</ul>
+<p>定义在 <code>server.h</code> 中，这里只列出 <code>string</code> 类型的编码</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> OBJ_ENCODING_RAW 0</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OBJ_ENCODING_INT 1</span></span><br><span class="line"><span class="meta">#<span class="keyword">define</span> OBJ_ENCODING_EMBSTR 8</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="字符串-raw-编码"><a href="#字符串-raw-编码" class="headerlink" title="字符串 raw 编码"></a>字符串 raw 编码</h3><p><code>raw</code> 编码主要用来保存长度超过 44 的字符串。其真实数据，由 <code>sdshdr</code> 结构来表示存储，外层还是由 redisObject 包装。<br><code>sdshdr</code> 结构大致如下：</p>
+<p><img data-src="/../images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228112917616.png" alt="sdshdr 结构"></p>
+<p>redisObject 中的 <code>ptr</code> 指针，就是指向 <code>sds</code>。</p>
+<p><img data-src="/../images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228213902420.png" alt="string raw 编码结构示例"></p>
+<h3 id="字符串-embstr-编码"><a href="#字符串-embstr-编码" class="headerlink" title="字符串 embstr 编码"></a>字符串 embstr 编码</h3><p><code>embstr</code> 编码是专门用于保存<strong>短字符串</strong>的一种优化编码方式。当字符串的长度小于等于 <strong>44</strong> 的时候，将采用 <code>embstr</code> 编码。</p>
+<p>创建字符串对象的代码如下(<code>object.c</code>)：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">define</span> OBJ_ENCODING_EMBSTR_SIZE_LIMIT 44</span></span><br><span class="line">robj *<span class="title function_">createStringObject</span><span class="params">(<span class="type">const</span> <span class="type">char</span> *ptr, <span class="type">size_t</span> len)</span> &#123;</span><br><span class="line">    <span class="keyword">if</span> (len &lt;= OBJ_ENCODING_EMBSTR_SIZE_LIMIT)</span><br><span class="line">        <span class="keyword">return</span> createEmbeddedStringObject(ptr,len);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        <span class="keyword">return</span> createRawStringObject(ptr,len);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><code>embstr</code> 有个显著的特点，就是 <code>redisObject</code> 跟 <code>sds</code> 的内存是挨在一起的。挨在一起的好处：</p>
+<ul>
+<li>分配内存的时候，只需要分配一次。而 <code>raw</code> 编码的<code>sds</code>跟<code>redisObject</code>分离，就要分配两次内存。</li>
+<li>同样，释放内存也只需要释放一次。</li>
+<li>连续内存能更好利用内存带来的优势。</li>
+</ul>
+<p>其结构示意图如下：</p>
+<p><img data-src="/../images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201229121012437.png" alt="string embstr 编码示意图"></p>
+<p><strong>那么为什么 embstr 跟 raw 的界限是 44 呢？</strong></p>
+<p><code>embstr</code> 的<code>sds</code>使用了 <code>sdshdr8</code>，<code>sdshdr8</code> 头占用了 3 个字节</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> __<span class="title">attribute__</span> ((__<span class="title">packed__</span>)) <span class="title">sdshdr8</span> &#123;</span></span><br><span class="line">    <span class="type">uint8_t</span> len; <span class="comment">/* 1 字节 */</span></span><br><span class="line">    <span class="type">uint8_t</span> alloc; <span class="comment">/* 1 字节 */</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">char</span> flags; <span class="comment">/* 1 字节 */</span></span><br><span class="line">    <span class="type">char</span> buf[];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>另外还有 <code>redisObject</code> 占用 16 个字节 (<code>4 + 4 + 24 + 32 + 64 = 128</code> 位)</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> type:<span class="number">4</span>;</span><br><span class="line">    <span class="type">unsigned</span> encoding:<span class="number">4</span>;</span><br><span class="line">    <span class="type">unsigned</span> lru:LRU_BITS; <span class="comment">// #define LRU_BITS 24</span></span><br><span class="line">    <span class="type">int</span> refcount; <span class="comment">// 32 位</span></span><br><span class="line">    <span class="type">void</span> *ptr; <span class="comment">// 64 位</span></span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
+
+<p><code>redisObject + sdshdr8</code> 至少需要 <code>3 + 16 = 19</code> 字节。</p>
+<p>redis 认为如果超过 <code>64</code> 字节就是大字符串，所以在 <code>redisObject+ sdshdr8</code> 的总长度是 <code>64</code> 字节的情况下，留给 <code>buf</code> 的长度就只剩下 <code>45</code> 字节，由于字符串结尾需要一个 <code>\0</code> 占用一个字节，所以留个字符串的长度就只有 <code>44</code> 字节了。</p>
+<p>公式：<code>64 - 3(sdshdr8) - 16(redisObject) - 1(\0) = 44</code></p>
+<p><strong>为什么网上有的博文说 embstr 跟 raw 的界限是 39</strong></p>
+<p>在 redis 3.2 版本之前，这个界限的确是 39，为什么后面改成 44 了呢？</p>
+<p>那是因为 <code>sdshdr</code> 的结构在 3.2 版本的时候修改了。3.2 之前的 <code>sdshdr</code> 结构是</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sdshdr</span> &#123;</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> len; <span class="comment">// 4 字节</span></span><br><span class="line">    <span class="type">unsigned</span> <span class="type">int</span> <span class="built_in">free</span>; <span class="comment">// 4 字节</span></span><br><span class="line">    <span class="type">char</span> buf[];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>旧版本的 <code>sdshdr</code> 的头占用了 8 个字节，比新版本的多了 <strong>5</strong> 个字节，所以界限就是 <code>44 - 5 = 39</code> 啦！</p>
+<h3 id="字符串-int-编码"><a href="#字符串-int-编码" class="headerlink" title="字符串 int 编码"></a>字符串 int 编码</h3><p>如果一个字符串对象保存的是整数值，并且这个整数值可以用 <code>long</code> 类型来表示，那么这个整数值将会保存在字符串对象结构的 <code>ptr</code> 属性里面（将 <code>void*</code> 转换成 <code>long</code>），并将字符串对象的编码设置为 <code>int</code>。</p>
+<p>相对于用 <code>raw</code> 编码，<code>int</code> 编码既节省了指针占用的内存，也节省了<code>sds</code>结构的内存</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">redis&gt; </span><span class="language-bash">SET int_key 12345</span></span><br><span class="line">OK</span><br><span class="line"><span class="meta prompt_">redis&gt; </span><span class="language-bash">OBJECT ENCODING int_key</span></span><br><span class="line">&quot;int&quot;</span><br></pre></td></tr></table></figure>
+
+<p>下图为存着 <code>12345</code> 的 <code>string</code> 示例结构：</p>
+<p><img data-src="/../images/pic/redis%E5%9F%BA%E7%A1%80%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/20201228105945950.png" alt="string int 编码结构示例"></p>
+<h2 id="编码的转换"><a href="#编码的转换" class="headerlink" title="编码的转换"></a>编码的转换</h2><h3 id="int-转-raw"><a href="#int-转-raw" class="headerlink" title="int 转 raw"></a>int 转 raw</h3><ul>
+<li>当字符串传的不是整数的时候，int 就会转成 raw 编码。</li>
+<li>如果执行了一些修改的命令，如 <code>append</code> 等( <code>set</code> 不算)，都会转成 <code>raw</code> 编码。因为这些操作只有字符串才支持。</li>
+<li>一旦编码变为 <code>raw</code> 之后，将不会再转成 <code>embstr</code></li>
+</ul>
+<h3 id="embstr-转-raw"><a href="#embstr-转-raw" class="headerlink" title="embstr 转 raw"></a>embstr 转 raw</h3><ul>
+<li><p>如果执行了一些修改的命令，如<code>append</code>等，都会转成 <code>raw</code> 编码，不管修改后字符串的长度。因为没有给 <code>embstr</code> 编码实现修改接口，所以实际上 <code>embsr</code> 是只读的。</p>
+</li>
+<li><p>一旦编码变为 <code>raw</code> 之后，将不会再转成 <code>embstr</code></p>
+</li>
+</ul>
+<hr>
+<h2 id="dict"><a href="#dict" class="headerlink" title="dict"></a>dict</h2><p>前面讲到，Redis 中的数据实际是存在 DB 中的 2 个核心 dict 字典中的。实际上 dict 也是 Redis 的一种使用广泛的内部数据结构。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28Bx6ALgQTAADi0ZMSOiA596.png" >
+
+<p>Redis 中的 dict，类似于 Memcached 中 hashtable。都可以用于 key 或元素的快速插入、更新和定位。dict 字典中，有一个长度为 2 的哈希表数组，日常访问用 0 号哈希表，如果 0 号哈希表元素过多，则分配一个 2 倍 0 号哈希表大小的空间给 1 号哈希表，然后进行逐步迁移，rehashidx 这个字段就是专门用来做标志迁移位置的。在哈希表操作中，采用单向链表来解决 hash 冲突问题。dict 中还有一个重要字段是 type，它用于保存 hash 函数及 key&#x2F;value 赋值、比较函数。</p>
+<p>dictht 中的 table 是一个 hash 表数组，每个桶指向一个 dictEntry 结构。dictht 采用 dictEntry 的单向链表来解决 hash 冲突问题。</p>
+<img data-src="../images/pic/redis基础数据结构/CgoB5l28Bx-ADosGAACskc5wrBU688.png">
+
+<p>dictht 是以 dictEntry 来存 key-value 映射的。其中 key 是 sds 字符串，value 为存储各种数据类型的 redisObject 结构。</p>
+<p>dict 可以被 redisDb 用来存储数据 key-value 及命令操作的辅助信息。还可以用来作为一些 Redis 数据类型的内部数据结构。dict 可以作为 set 集合的内部数据结构。在哈希的元素数超过 512 个，或者哈希中 value 大于 64 字节，dict 还被用作为哈希类型的内部数据结构。</p>
+<h2 id="sds"><a href="#sds" class="headerlink" title="sds"></a>sds</h2><p>字符串是 Redis 中最常见的数据类型，其底层实现是简单动态字符串即 sds。简单动态字符串本质是一个 char*，内部通过 sdshdr 进行管理。sdshdr 有 4 个字段。len 为字符串实际长度，alloc 当前字节数组总共分配的内存大小。flags 记录当前字节数组的属性；buf 是存储字符串真正的值及末尾一个 \0。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28Bx-AEW-LAABgCctayIw793.png">
+
+<p>sds 的存储 buf 可以动态扩展或收缩，字符串长度不用遍历，可直接获得，修改和访问都很方便。由于 sds 中字符串存在 buf 数组中，长度由 len 定义，而不像传统字符串遇 0 停止，所以 sds 是二进制安全的，可以存放任何二进制的数据。</p>
+<img data-src="../images/pic/redis基础数据结构/CgoB5l28Bx-ARu4ZAACk1VRWcR4166.png">
+
+<p>简单动态字符串 sds 的获取字符串长度很方便，通过 len 可以直接得到，而传统字符串需要对字符串进行遍历，时间复杂度为 O(n)。</p>
+<p>sds 相比传统字符串多了一个 sdshdr，对于大量很短的字符串，这个 sdshdr 还是一个不小的开销。在 3.2 版本后，sds 会根据字符串实际的长度，选择不同的数据结构，以更好的提升内存效率。当前 sdshdr 结构分为 5 种子类型，分别为 sdshdr5、sdshdr8、sdshdr16、sdshdr32、sdshdr64。其中 sdshdr5 只有 flags 和 buf 字段，其他几种类型的 len 和 alloc 采用从 uint8_t 到 uint64_t 的不同类型，以节省内存空间。</p>
+<p>sds 可以作为字符串的内部数据结构，同时 sds 也是 hyperloglog、bitmap 类型的内部数据结构。</p>
+<h2 id="ziplist"><a href="#ziplist" class="headerlink" title="ziplist"></a>ziplist</h2><p>为了节约内存，并减少内存碎片，Redis 设计了 ziplist 压缩列表内部数据结构。压缩列表是一块连续的内存空间，可以连续存储多个元素，没有冗余空间，是一种连续内存数据块组成的顺序型内存结构。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28Bx-ACG0jAAB7HSDeUSg826.png">
+
+<p>ziplist 的结构如图所示，主要包括 5 个部分。</p>
+<ol>
+<li>zlbytes 是压缩列表所占用的总内存字节数。</li>
+<li>Zltail&amp;nbsp;尾节点到起始位置的字节数。</li>
+<li>Zllen&amp;nbsp;总共包含的节点&#x2F;内存块数。</li>
+<li>Entry 是 ziplist 保存的各个数据节点，这些数据点长度随意。</li>
+<li>Zlend 是一个魔数 255，用来标记压缩列表的结束。</li>
+</ol>
+<p>如图所示，一个包含 4 个元素的 ziplist，总占用字节是 100bytes，该 ziplist 的起始元素的指针是 p，zltail 是 80，则第 4 个元素的指针是 P+80。</p>
+<img data-src="../images/pic/redis基础数据结构/CgoB5l28Bx-AY9k6AACHwHJEeWc739.png">
+
+<p>压缩列表 ziplist 的存储节点 entry 的结构如图，主要有 6 个字段。</p>
+<ul>
+<li>prevRawLen 是前置节点的长度；</li>
+<li>preRawLenSize 编码 preRawLen 需要的字节数；</li>
+<li>len 当前节点的长度；</li>
+<li>lensize 编码 len 所需要的字节数；</li>
+<li>encoding&amp;nbsp; 当前节点所用的编码类型；</li>
+<li>entryData 当前节点数据。</li>
+</ul>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28Bx-AHq20AABn2LByDio271.png">
+
+<p>由于 ziplist 是连续紧凑存储，没有冗余空间，所以插入新的元素需要 realloc 扩展内存，所以如果 ziplist 占用空间太大，realloc 重新分配内存和拷贝的开销就会很大，所以 ziplist 不适合存储过多元素，也不适合存储过大的字符串。</p>
+<p>因此只有在元素数和 value 数都不大的时候，ziplist 才作为 hash 和 zset 的内部数据结构。其中 hash 使用 ziplist 作为内部数据结构的限制时，元素数默认不超过 512 个，value 值默认不超过 64 字节。可以通过修改配置来调整 hash_max_ziplist_entries 、hash_max_ziplist_value 这两个阀值的大小。</p>
+<p>zset 有序集合，使用 ziplist 作为内部数据结构的限制元素数默认不超过 128 个，value 值默认不超过 64 字节。可以通过修改配置来调整 zset_max_ziplist_entries 和 zset_max_ziplist_value&amp;nbsp;这两个阀值的大小。</p>
+<h2 id="quicklist"><a href="#quicklist" class="headerlink" title="quicklist"></a>quicklist</h2><p>Redis 在 3.2 版本之后引入 quicklist，用以替换 linkedlist。因为 linkedlist 每个节点有前后指针，要占用 16 字节，而且每个节点独立分配内存，很容易加剧内存的碎片化。而 ziplist 由于紧凑型存储，增加元素需要 realloc，删除元素需要内存拷贝，天然不适合元素太多、value 太大的存储。</p>
+<img data-src="../images/pic/redis基础数据结构/CgoB5l28ByCADkuqAACua3XXug4030.png">
+
+<p>而 quicklist 快速列表应运而生，它是一个基于 ziplist 的双向链表。将数据分段存储到 ziplist，然后将这些 ziplist 用双向指针连接。快速列表的结构如图所示。</p>
+<ul>
+<li>head、tail 是两个指向第一个和最后一个 ziplist 节点的指针。</li>
+<li>count 是 quicklist 中所有的元素个数。</li>
+<li>len 是 ziplist 节点的个数。</li>
+<li>compress 是 LZF 算法的压缩深度。</li>
+</ul>
+<p>快速列表中，管理 ziplist 的是 quicklistNode 结构。quicklistNode 主要包含一个 prev&#x2F;next 双向指针，以及一个 ziplist 节点。单个 ziplist 节点可以存放多个元素。</p>
+<p>快速列表从头尾读写数据很快，时间复杂度为 O(1)。也支持从中间任意位置插入或读写元素，但速度较慢，时间复杂度为 O(n)。快速列表当前主要作为 list 列表的内部数据结构。</p>
+<h2 id="zskiplist"><a href="#zskiplist" class="headerlink" title="zskiplist"></a>zskiplist</h2><p>跳跃表 zskiplist 是一种有序数据结构，它通过在每个节点维持多个指向其他节点的指针，从而可以加速访问。跳跃表支持平均 O(logN) 和最差 O(n) 复杂度的节点查找。在大部分场景，跳跃表的效率和平衡树接近，但跳跃表的实现比平衡树要简单，所以不少程序都用跳跃表来替换平衡树。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28ByCAWS7-AADDdAI6Jok848.png">
+
+<p>如果 sorted set 类型的元素数比较多或者元素比较大，Redis 就会选择跳跃表来作为 sorted set有序集合的内部数据结构。</p>
+<p>跳跃表主要由 zskipList 和节点 zskiplistNode 构成。zskiplist 结构如图，header 指向跳跃表的表头节点。tail 指向跳跃表的表尾节点。length 表示跳跃表的长度，它是跳跃表中不包含表头节点的节点数量。level 是目前跳跃表内，除表头节点外的所有节点中，层数最大的那个节点的层数。</p>
+<p>跳跃表的节点 zskiplistNode 的结构如图所示。ele 是节点对应的 sds 值，在 zset 有序集合中就是集合中的 field 元素。score 是节点的分数，通过 score，跳跃表中的节点自小到大依次排列。backward 是指向当前节点的前一个节点的指针。level 是节点中的层，每个节点一般有多个层。每个 level 层都带有两个属性，一个是 forwad 前进指针，它用于指向表尾方向的节点；另外一个是 span 跨度，它是指 forward 指向的节点到当前节点的距离。</p>
+<img data-src="../images/pic/redis基础数据结构/CgoB5l28ByCASkZeAADPgl0yXtk817.png">
+
+<p>如图所示是一个跳跃表，它有 3 个节点。对应的元素值分别是 S1、S2 和 S3，分数值依次为 1.0、3.0 和 5.0。其中 S3 节点的 level 最大是 5，跳跃表的 level 是 5。header 指向表头节点，tail 指向表尾节点。在查到元素时，累加路径上的跨度即得到元素位置。在跳跃表中，元素必须是唯一的，但 score 可以相同。相同 score 的不同元素，按照字典序进行排序。</p>
+<p>在 sorted set 数据类型中，如果元素数较多或元素长度较大，则使用跳跃表作为内部数据结构。默认元素数超过 128 或者最大元素的长度超过 64，此时有序集合就采用 zskiplist 进行存储。由于 geo 也采用有序集合类型来存储地理位置名称和位置 hash 值，所以在超过相同阀值后，也采用跳跃表进行存储。</p>
+<h1 id="八种数据类型对应的内部结构"><a href="#八种数据类型对应的内部结构" class="headerlink" title="八种数据类型对应的内部结构"></a>八种数据类型对应的内部结构</h1><p>Redis 主要的内部数据结构讲完了，接下来整体看一下，之前讲的 8 种数据类型，具体都是采用哪种内部数据结构来存储的。</p>
+<img data-src="../images/pic/redis基础数据结构/CgotOV28ByCAIhL8AAEZ-o72tpY715.png">
+
+<p>首先，对于 string 字符串，Redis 主要采用 sds 来进行存储。而对于 list 列表，Redis 采用 quicklist 进行存储。对于 set 集合类型，Redis 采用 dict 来进行存储。对于 sorted set 有序集合类型，如果元素数小于 128 且元素长度小于 64，则使用 ziplist 存储，否则使用 zskiplist 存储。对于哈希类型，如果元素数小于 512，并且元素长度小于 64，则用 ziplist 存储，否则使用 dict 字典存储。对于 hyperloglog，采用 sds 简单动态字符串存储。对于 geo，如果位置数小于 128，则使用 ziplist 存储，否则使用 zskiplist 存储。最后对于 bitmap，采用 sds 简单动态字符串存储。</p>
+<p>除了这些主要的内部数据结构，还有在特殊场景下也会采用一些其他内部结构存储，比如，如果操作的字符串都是整数，同时指令是 incr、decr 等，会对字符串采用 long 型整数存储，这些场景比较特殊，限于时间关系，这里不做进一步阐述。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><img data-src="../images/pic/redis基础数据结构/redis基础数据结构.png" alt="redis基础数据结构"/>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/redis-structure.html" title="redis基础数据结构">https://tf2jaguar.dpdns.org/redis-structure.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84/" rel="tag"><i class="fa fa-tag"></i> 数据结构</a>
+              <a href="/tags/redis/" rel="tag"><i class="fa fa-tag"></i> redis</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/mysql-speciality.html" rel="prev" title="mysql部分特性">
+                  <i class="fa fa-chevron-left"></i> mysql部分特性
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/io-model.html" rel="next" title="IO模型">
+                  IO模型 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

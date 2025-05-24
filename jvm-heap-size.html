@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="结论先行 jvm内存指针优化 1、将Java Heap Size设置的大于32G会对性能有什么影响？ 1.1 JVM的OOPS 1.2 JVM的优化策略Compressed OOPS 1.3 Zero Based Compressed OOPS的多种策略">
+<meta property="og:type" content="article">
+<meta property="og:title" content="jvm-堆内存不要超过32G">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/jvm-heap-size.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="结论先行 jvm内存指针优化 1、将Java Heap Size设置的大于32G会对性能有什么影响？ 1.1 JVM的OOPS 1.2 JVM的优化策略Compressed OOPS 1.3 Zero Based Compressed OOPS的多种策略">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-78b3df077014f49f77f5c0e3899c4e3b_720w.jpg">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-7baa8a6335e30d29249b9b074badead0_720w.jpg">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-c34fcc70011fd461dc68c11f6fa0c104_720w.jpg">
+<meta property="article:published_time" content="2022-12-04T07:37:33.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.470Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="jvm">
+<meta property="article:tag" content="jvm参数优化">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-78b3df077014f49f77f5c0e3899c4e3b_720w.jpg">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/jvm-heap-size.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/jvm-heap-size.html","path":"jvm-heap-size.html","title":"jvm-堆内存不要超过32G"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>jvm-堆内存不要超过32G | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BB%93%E8%AE%BA%E5%85%88%E8%A1%8C"><span class="nav-number">1.</span> <span class="nav-text">结论先行</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#jvm%E5%86%85%E5%AD%98%E6%8C%87%E9%92%88%E4%BC%98%E5%8C%96"><span class="nav-number">2.</span> <span class="nav-text">jvm内存指针优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1%E3%80%81%E5%B0%86Java-Heap-Size%E8%AE%BE%E7%BD%AE%E7%9A%84%E5%A4%A7%E4%BA%8E32G%E4%BC%9A%E5%AF%B9%E6%80%A7%E8%83%BD%E6%9C%89%E4%BB%80%E4%B9%88%E5%BD%B1%E5%93%8D%EF%BC%9F"><span class="nav-number">2.1.</span> <span class="nav-text">1、将Java Heap Size设置的大于32G会对性能有什么影响？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-JVM%E7%9A%84OOPS"><span class="nav-number">2.1.1.</span> <span class="nav-text">1.1 JVM的OOPS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-JVM%E7%9A%84%E4%BC%98%E5%8C%96%E7%AD%96%E7%95%A5Compressed-OOPS"><span class="nav-number">2.1.2.</span> <span class="nav-text">1.2 JVM的优化策略Compressed OOPS</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-Zero-Based-Compressed-OOPS%E7%9A%84%E5%A4%9A%E7%A7%8D%E7%AD%96%E7%95%A5"><span class="nav-number">2.1.3.</span> <span class="nav-text">1.3 Zero Based Compressed OOPS的多种策略</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2%E3%80%81%E7%BB%93%E8%AE%BA"><span class="nav-number">2.2.</span> <span class="nav-text">2、结论</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%BA%E4%BB%80%E4%B9%88JVM%E5%BC%80%E5%90%AF%E6%8C%87%E9%92%88%E5%8E%8B%E7%BC%A9%E5%90%8E%E6%94%AF%E6%8C%81%E7%9A%84%E6%9C%80%E5%A4%A7%E5%A0%86%E5%86%85%E5%AD%98%E6%98%AF32G"><span class="nav-number">3.</span> <span class="nav-text">为什么JVM开启指针压缩后支持的最大堆内存是32G?</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%88%E6%94%BE%E5%87%BA%E7%BB%93%E8%AE%BA"><span class="nav-number">3.1.</span> <span class="nav-text">先放出结论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BC%96%E5%86%99%E7%A8%8B%E5%BA%8F%E6%B5%8B%E8%AF%95%E4%B8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">编写程序测试下</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%AF%B9%E8%B1%A1%E6%8C%87%E9%92%88%E7%9A%84%E4%B8%89%E7%A7%8D%E6%A8%A1%E5%BC%8F"><span class="nav-number">3.3.</span> <span class="nav-text">压缩对象指针的三种模式</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/jvm-heap-size.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="jvm-堆内存不要超过32G | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          jvm-堆内存不要超过32G
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-12-04 15:37:33" itemprop="dateCreated datePublished" datetime="2022-12-04T15:37:33+08:00">2022-12-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/java%E7%9B%B8%E5%85%B3/" itemprop="url" rel="index"><span itemprop="name">java相关</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/jvm-heap-size.html" class="post-meta-item leancloud_visitors" data-flag-title="jvm-堆内存不要超过32G" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>5.4k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>5 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <ul>
+<li><a href="#%E7%BB%93%E8%AE%BA%E5%85%88%E8%A1%8C">结论先行</a></li>
+<li><a href="#jvm%E5%86%85%E5%AD%98%E6%8C%87%E9%92%88%E4%BC%98%E5%8C%96">jvm内存指针优化</a><ul>
+<li><a href="#1%E5%B0%86java-heap-size%E8%AE%BE%E7%BD%AE%E7%9A%84%E5%A4%A7%E4%BA%8E32g%E4%BC%9A%E5%AF%B9%E6%80%A7%E8%83%BD%E6%9C%89%E4%BB%80%E4%B9%88%E5%BD%B1%E5%93%8D">1、将Java Heap Size设置的大于32G会对性能有什么影响？</a><ul>
+<li><a href="#11-jvm%E7%9A%84oops">1.1 JVM的OOPS</a></li>
+<li><a href="#12-jvm%E7%9A%84%E4%BC%98%E5%8C%96%E7%AD%96%E7%95%A5compressed-oops">1.2 JVM的优化策略Compressed OOPS</a></li>
+<li><a href="#13-zero-based-compressed-oops%E7%9A%84%E5%A4%9A%E7%A7%8D%E7%AD%96%E7%95%A5">1.3 Zero Based Compressed OOPS的多种策略</a><span id="more"></span></li>
+</ul>
+</li>
+<li><a href="#2%E7%BB%93%E8%AE%BA">2、结论</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%BA%E4%BB%80%E4%B9%88jvm%E5%BC%80%E5%90%AF%E6%8C%87%E9%92%88%E5%8E%8B%E7%BC%A9%E5%90%8E%E6%94%AF%E6%8C%81%E7%9A%84%E6%9C%80%E5%A4%A7%E5%A0%86%E5%86%85%E5%AD%98%E6%98%AF32g">为什么JVM开启指针压缩后支持的最大堆内存是32G?</a><ul>
+<li><a href="#%E5%85%88%E6%94%BE%E5%87%BA%E7%BB%93%E8%AE%BA">先放出结论</a></li>
+<li><a href="#%E7%BC%96%E5%86%99%E7%A8%8B%E5%BA%8F%E6%B5%8B%E8%AF%95%E4%B8%8B">编写程序测试下</a></li>
+<li><a href="#%E5%8E%8B%E7%BC%A9%E5%AF%B9%E8%B1%A1%E6%8C%87%E9%92%88%E7%9A%84%E4%B8%89%E7%A7%8D%E6%A8%A1%E5%BC%8F">压缩对象指针的三种模式</a></li>
+</ul>
+</li>
+</ul>
+<h1 id="结论先行"><a href="#结论先行" class="headerlink" title="结论先行"></a>结论先行</h1><blockquote>
+<p>不要超过32G</p>
+</blockquote>
+<p>事实上jvm在内存小于32G的时候会采用一个 <strong>内存对象指针压缩技术</strong>。  </p>
+<p>在java中，所有的对象都分配在堆上，然后有一个指针引用它。指向这些对象的指针大小通常是CPU的字长的大小，不是32bit就是64bit，这取决于你的处理器，指针指向了你的值的精确位置。  </p>
+<p>对于32位系统，你的内存最大可使用4G。对于64系统可以使用更大的内存。但是64位的指针意味着更大的浪费，因为你的指针本身大了。浪费内存不算，更糟糕的是，更大的指针在主内存和缓存器（例如LLC, L1等）之间移动数据的时候，会占用更多的带宽。  </p>
+<p>Java 使用一个叫内存指针压缩的技术来解决这个问题。<strong>它的指针不再表示对象在内存中的精确位置，而是表示偏移量。这意味着32位的指针可以引用40亿个对象，而不是40亿个字节。</strong>最终，也就是说堆内存长到32G的物理内存，也可以用32bit的指针表示。  </p>
+<p>一旦你越过那个神奇的30-32G的边界，指针就会切回普通对象的指针，每个对象的指针都变长了，就会使用更多的CPU内存带宽，也就是说你实际上失去了更多的内存。事实上当内存到达40-50GB的时候，有效内存才相当于使用内存对象指针压缩技术时候的32G内存。  </p>
+<p>这段描述的意思就是说：即便你有足够的内存，也尽量不要超过32G，因为它浪费了内存，降低了CPU的性能，还要让GC应对大内存。</p>
+<h1 id="jvm内存指针优化"><a href="#jvm内存指针优化" class="headerlink" title="jvm内存指针优化"></a>jvm内存指针优化</h1><p>以下摘抄自网络</p>
+<p><a target="_blank" rel="noopener" href="https://blog.csdn.net/zsj777/article/details/80352962">JVM内存不要超过32G_zsj777的专栏-CSDN博客_jvm内存超过32g</a></p>
+<h2 id="1、将Java-Heap-Size设置的大于32G会对性能有什么影响？"><a href="#1、将Java-Heap-Size设置的大于32G会对性能有什么影响？" class="headerlink" title="1、将Java Heap Size设置的大于32G会对性能有什么影响？"></a>1、将Java Heap Size设置的大于32G会对性能有什么影响？</h2><p>开门见山的说，结果有几点（这几点其实也是内部关联）：</p>
+<ul>
+<li><p>触发JVM的临界值，优化策略Compressed OOPS失效（之前Heap Size在[4G~32G]区间内采用此优化）</p>
+</li>
+<li><p>由于优化策略失效，同时堆内存&gt;32G，所以JVM被迫使用8字节（64位）来对Java对象寻址（之前4字节（32位）就够了）</p>
+</li>
+<li><p>通常64位JVM消耗的内存会比32位的大1.5倍，这是因为对象指针在64位架构下，长度会翻倍（事实上当内存到达40-50GB的时候，有效内存才相当于使用Compressed OOPS技术时候的32G内存）</p>
+</li>
+<li><p>更大的指针在主内存和缓存器（例如LLC, L1等）之间移动数据的时候，会占用更多的带宽</p>
+</li>
+<li><p>让JVM的GC面临更大压力的指针对象（在实际应用中构建大于12-16G的堆时，若无很好的性能调优与测评，你很容易就会引起一个耗时数分钟的完全GC）</p>
+</li>
+</ul>
+<h3 id="1-1-JVM的OOPS"><a href="#1-1-JVM的OOPS" class="headerlink" title="1.1 JVM的OOPS"></a>1.1 JVM的OOPS</h3><p>OOP &#x3D; “ordinary object pointer” 普通对象指针</p>
+<p>启用CompressOops后，会压缩的对象：</p>
+<ul>
+<li><p>每个class的属性指针（静态成员变量）</p>
+</li>
+<li><p>每个对象的属性指针</p>
+</li>
+<li><p>普通对象数组的每个元素指针</p>
+</li>
+</ul>
+<h3 id="1-2-JVM的优化策略Compressed-OOPS"><a href="#1-2-JVM的优化策略Compressed-OOPS" class="headerlink" title="1.2 JVM的优化策略Compressed OOPS"></a>1.2 JVM的优化策略Compressed OOPS</h3><p>从JDK 1.6 update14开始，64 bit JVM正式支持了 -XX:+UseCompressedOops ，这个可以压缩指针，起到节约内存占用的新参数。</p>
+<p>Compressed OOPS，即大雾的对象压缩技术，压缩引用到32位，以降低堆的占用空间。其伪代码原理就不贴了，</p>
+<p>在堆大小在[4G~32G]的时候，这项技术会被触发，在JVM执行时加入编&#x2F;解码指令，即</p>
+<blockquote>
+<p>JVM在将对象存入堆时编码,在堆中读取对象时解码</p>
+</blockquote>
+<p>内存地址确定公式类似于</p>
+<table style="width: 1526px" cellspacing="0" cellpadding="0"><tbody data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><tr class="firstRow" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><td class="gutter" width="35" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-color=""><div class="line number1 index0 alt2" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-right="">1</div></td><td class="code" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor=""><div class="line number1 index0 alt2" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><code class="bash plain" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="">&lt;narrow-oop-base(64bits)&gt; +(&lt;narrow-oop(32bits)&gt;&lt;&lt; 3) +&lt;field-offset&gt;</code></div></td></tr></tbody></table>
+
+<p>Zero Based Compressed OOPS（零基压缩优化）则进一步将基地址置为0(并不一定是内存空间地址为0,只是JVM相对的逻辑地址为0,如可用CPU的寄存器相对寻址) 这样转换公式变为：</p>
+<table style="width: 1526px" cellspacing="0" cellpadding="0"><tbody data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><tr class="firstRow" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><td class="gutter" width="35" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-color=""><div class="line number1 index0 alt2" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-right="">1</div></td><td class="code" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor=""><div class="line number1 index0 alt2" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left=""><code class="bash plain" data-darkreader-inline-bgimage="" data-darkreader-inline-bgcolor="" data-darkreader-inline-border-top="" data-darkreader-inline-border-right="" data-darkreader-inline-border-bottom="" data-darkreader-inline-border-left="">(&lt;narrow-oop &lt;&lt; 3) +&lt;field-offset&gt;</code></div></td></tr></tbody></table>
+
+<p>从而进一步提高了压解压效率。</p>
+<blockquote>
+<p>使用Zero Based Compressed OOPS后，它的指针不再表示对象在内存中的精确位置，而是表示偏移量。这意味着32位的指针可以引用40亿个对象，而不是40亿个字节。</p>
+</blockquote>
+<h3 id="1-3-Zero-Based-Compressed-OOPS的多种策略"><a href="#1-3-Zero-Based-Compressed-OOPS的多种策略" class="headerlink" title="1.3 Zero Based Compressed OOPS的多种策略"></a>1.3 Zero Based Compressed OOPS的多种策略</h3><p>它可以针对不同的堆大小使用多种策略，具体可以 ps + grep查看：</p>
+<ul>
+<li><p>堆小于4G，无需编&#x2F;解码操作，JVM会使用低虚拟地址空间（low virutal address space，64位下模拟32位）</p>
+</li>
+<li><p>小于32G而大于4G，使用Zero Based Compressed OOPS</p>
+</li>
+<li><p>大于32G，不使用Compressed OOPS</p>
+</li>
+</ul>
+<h2 id="2、结论"><a href="#2、结论" class="headerlink" title="2、结论"></a>2、结论</h2><ul>
+<li><p>Compressed OOPS，可以让跑在64位平台下的JVM，不需要因为更宽的寻址，而付出Heap容量损失的代价</p>
+</li>
+<li><p>它的实现方式是在机器码中植入压缩与解压指令，可能会给JVM增加额外的开销</p>
+</li>
+</ul>
+<h1 id="为什么JVM开启指针压缩后支持的最大堆内存是32G"><a href="#为什么JVM开启指针压缩后支持的最大堆内存是32G" class="headerlink" title="为什么JVM开启指针压缩后支持的最大堆内存是32G?"></a>为什么JVM开启指针压缩后支持的最大堆内存是32G?</h1><p>以下摘抄自网络</p>
+<p> <a target="_blank" rel="noopener" href="https://www.zhihu.com/question/365436606">为什么JVM开启指针压缩后支持的最大堆内存是32G? - 知乎</a> </p>
+<ol>
+<li>在64位平台的HotSpot中使用32位指针，内存使用会多出1.5倍左右，使用较大指针在主内存和缓存之间移动数据，占用较大宽带，同时GC也会承受较大压力</li>
+<li>为了减少64位平台下内存的消耗，启用指针压缩功能</li>
+<li>在jvm中，32位地址表示4G个对象的指针，在4G-32G堆内存范围内，可以通过编码、解码方式进行优化，使得jvm可以支持更大的内存配置</li>
+<li>堆内存小于4G时，不需要启用指针压缩，jvm会直接去除高32位地址，即使用低虚拟地址空间</li>
+<li>堆内存大于32G时，压缩指针会失效，会强制使用64位(即8字节)来对java对象寻址，这就会出现1的问题，所以堆内存不要大于32G为好</li>
+</ol>
+<h2 id="先放出结论"><a href="#先放出结论" class="headerlink" title="先放出结论"></a>先放出结论</h2><p>如果配置最大堆内存超过 32 GB（当 JVM 是 8 字节对齐），那么压缩指针会失效。</p>
+<p>但是，这个 32 GB 是和字节对齐大小相关的，也就是 <code>-XX:ObjectAlignmentInBytes</code> 配置的大小(默认为8字节，也就是 Java 默认是 8 字节对齐)。<code>-XX:ObjectAlignmentInBytes</code> 可以设置为 8 的整数倍，最大 128。</p>
+<p>也就是如果配置 <code>-XX:ObjectAlignmentInBytes</code> 为 24，那么配置最大堆内存超过 96 GB 压缩指针才会失效。  </p>
+<p>压缩指针这个属性默认是打开的，可以通过<code>-XX:-UseCompressedOops</code>关闭。</p>
+<p>首先说一下为何需要压缩指针呢？32 位的存储，可以描述多大的内存呢？假设每一个1代表1字节，那么可以描述 0~2^32-1 这 2^32 字节也就是 4 GB 的内存。 </p>
+<p><img data-src="/../images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-78b3df077014f49f77f5c0e3899c4e3b_720w.jpg"></p>
+<p>但是呢，<strong>Java 默认是 8 字节对齐的内存，也就是一个对象占用的空间，必须是 8 字节的整数倍，不足的话会填充到 8 字节的整数倍</strong>。也就是其实<strong>描述内存的时候，不用从 0 开始描述到 8</strong>（就是根本不需要定位到之间的1，2，3，4，5，6，7）因为对象起止肯定都是 8 的整数倍。所以，<strong>2^32 字节如果一个1代表8字节的话，那么最多可以描述 2^32 * 8 字节也就是 32 GB 的内存</strong>。</p>
+<p><img data-src="/../images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-7baa8a6335e30d29249b9b074badead0_720w.jpg"></p>
+<p>这就是压缩指针的原理。如果配置最大堆内存超过 32 GB（当 JVM 是 8 字节对齐），那么<strong>压缩指针会失效</strong>。 但是，这个 32 GB 是和字节对齐大小相关的，也就是<code>-XX:ObjectAlignmentInBytes</code>配置的大小(默认为8字节，也就是 Java 默认是 8 字节对齐)。<code>-XX:ObjectAlignmentInBytes</code>可以设置为 8 的整数倍，最大 128。也就是如果配置<code>-XX:ObjectAlignmentInBytes</code>为 24，那么配置最大堆内存超过 96 GB 压缩指针才会失效。</p>
+<h2 id="编写程序测试下"><a href="#编写程序测试下" class="headerlink" title="编写程序测试下"></a>编写程序测试下</h2><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">A a = new A();</span><br><span class="line">System.out.println(&quot;------After Initialization------\n&quot; + ClassLayout.parseInstance(a).toPrintable());</span><br></pre></td></tr></table></figure>
+
+<p>首先，以启动参数：<code>-XX:ObjectAlignmentInBytes=8 -Xmx16g</code>执行：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">------After Initialization------</span><br><span class="line">com.hashjang.jdk.TestObjectAlign$A object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                VALUE</span><br><span class="line">      0     4    (object header)                05 00 00 00 (00000101 00000000 00000000 00000000) (5)</span><br><span class="line">      4     4    (object header)                00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4    (object header)                48 72 06 00 (01001000 01110010 00000110 00000000) (422472)</span><br><span class="line">     12     4    (alignment/padding gap)                  </span><br><span class="line">     16     8   long A.d                        0</span><br><span class="line">Instance size: 24 bytes</span><br><span class="line">Space losses: 4 bytes internal + 0 bytes external = 4 bytes total</span><br></pre></td></tr></table></figure>
+
+<p>可以看到类型字大小为 4 字节<code>48 72 06 00 (01001000 01110010 00000110 00000000) (422472)</code>，压缩指针生效。</p>
+<p>首先，以启动参数：<code>-XX:ObjectAlignmentInBytes=8 -Xmx32g</code>执行：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">------After Initialization------</span><br><span class="line">com.hashjang.jdk.TestObjectAlign$A object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                 VALUE</span><br><span class="line">      0     4    (object header)                 05 00 00 00 (00000101 00000000 00000000 00000000) (5)</span><br><span class="line">      4     4    (object header)                 00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4    (object header)                 a0 5b c6 00 (10100000 01011011 11000110 00000000) (12999584)</span><br><span class="line">     12     4    (object header)                 b4 02 00 00 (10110100 00000010 00000000 00000000) (692)</span><br><span class="line">     16     8   long A.d                         0</span><br><span class="line">Instance size: 24 bytes</span><br><span class="line">Space losses: 0 bytes internal + 0 bytes external = 0 bytes total</span><br></pre></td></tr></table></figure>
+
+<p>可以看到类型字大小为 8 字节，压缩指针失效:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">a0 5b c6 00 (10100000 01011011 11000110 00000000) (12999584)</span><br><span class="line">b4 02 00 00 (10110100 00000010 00000000 00000000) (692)</span><br></pre></td></tr></table></figure>
+
+<p>修改对齐大小为 16 字节，也就是以<code>-XX:ObjectAlignmentInBytes=16 -Xmx32g</code>执行：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">------After Initialization------</span><br><span class="line">com.hashjang.jdk.TestObjectAlign$A object internals:</span><br><span class="line"> OFFSET  SIZE   TYPE DESCRIPTION                 VALUE</span><br><span class="line">      0     4    (object header)                 05 00 00 00 (00000101 00000000 00000000 00000000) (5)</span><br><span class="line">      4     4    (object header)                 00 00 00 00 (00000000 00000000 00000000 00000000) (0)</span><br><span class="line">      8     4    (object header)                 48 72 06 00 (01001000 01110010 00000110 00000000) (422472)</span><br><span class="line">     12     4    (alignment/padding gap)                  </span><br><span class="line">     16     8   long A.d                         0</span><br><span class="line">     24     8    (loss due to the next object alignment)</span><br><span class="line">Instance size: 32 bytes</span><br><span class="line">Space losses: 4 bytes internal + 8 bytes external = 12 bytes total</span><br></pre></td></tr></table></figure>
+
+<p>可以看到类型字大小为 4 字节<code>48 72 06 00 (01001000 01110010 00000110 00000000) (422472)</code>，压缩指针生效。</p>
+<h2 id="压缩对象指针的三种模式"><a href="#压缩对象指针的三种模式" class="headerlink" title="压缩对象指针的三种模式"></a>压缩对象指针的三种模式</h2><p>开启 <code>-XX:+UseCompressedOops</code> 后对象计算有三种模式</p>
+<p><img data-src="/../images/pic/jvm-%E5%A0%86%E5%86%85%E5%AD%98%E4%B8%8D%E8%A6%81%E8%B6%85%E8%BF%8732G/v2-c34fcc70011fd461dc68c11f6fa0c104_720w.jpg"></p>
+<ol>
+<li>如果堆的高位地址小于32G，说明不需要基址（base）就能定位堆中任意对象，这种模式也叫做Zero-based Compressed Oops Mode</li>
+<li>如果堆高位大于等于32G，说明需要基地址，这时如果堆大小小于4G，说明基址+偏移能定位堆中任意对象</li>
+<li>如果堆处于4G到32G的范围，这时只能通过基址+偏移x缩放（scale）才能定位堆中任意对象</li>
+</ol>
+<p>如果有shift的存在，对象地址还必须8字节对齐8，如果不幸堆大于32G，那么无法使用压缩对象指针。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/jvm-heap-size.html" title="jvm-堆内存不要超过32G">https://tf2jaguar.dpdns.org/jvm-heap-size.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/jvm/" rel="tag"><i class="fa fa-tag"></i> jvm</a>
+              <a href="/tags/jvm%E5%8F%82%E6%95%B0%E4%BC%98%E5%8C%96/" rel="tag"><i class="fa fa-tag"></i> jvm参数优化</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/redis-progressive-rehash.html" rel="prev" title="redis扩容缩容渐进式rehash">
+                  <i class="fa fa-chevron-left"></i> redis扩容缩容渐进式rehash
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/srping-extension-point.html" rel="next" title="spring中常用的11个扩展点">
+                  spring中常用的11个扩展点 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="引言 一、并发事务的四种场景 1.1、读-读场景 1.2、写-写场景 1.3、读-写、写-读场景 1.4、各场景下解决问题的方案">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql的mvcc机制">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/mysql-mvcc.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="引言 一、并发事务的四种场景 1.1、读-读场景 1.2、写-写场景 1.3、读-写、写-读场景 1.4、各场景下解决问题的方案">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/4a7bdb03908c4c95850e3efa0d18e599~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/9921fcbf353f4dbba802f706034e03c7~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/e191761e5fac43cca83c33585d2d9695~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+<meta property="article:published_time" content="2022-11-22T10:08:33.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.473Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="原理">
+<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="mvcc机制">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/mysql-mvcc.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/mysql-mvcc.html","path":"mysql-mvcc.html","title":"mysql的mvcc机制"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>mysql的mvcc机制 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81%E5%B9%B6%E5%8F%91%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9B%9B%E7%A7%8D%E5%9C%BA%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">一、并发事务的四种场景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1%E3%80%81%E8%AF%BB-%E8%AF%BB%E5%9C%BA%E6%99%AF"><span class="nav-number">2.1.</span> <span class="nav-text">1.1、读-读场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2%E3%80%81%E5%86%99-%E5%86%99%E5%9C%BA%E6%99%AF"><span class="nav-number">2.2.</span> <span class="nav-text">1.2、写-写场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3%E3%80%81%E8%AF%BB-%E5%86%99%E3%80%81%E5%86%99-%E8%AF%BB%E5%9C%BA%E6%99%AF"><span class="nav-number">2.3.</span> <span class="nav-text">1.3、读-写、写-读场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4%E3%80%81%E5%90%84%E5%9C%BA%E6%99%AF%E4%B8%8B%E8%A7%A3%E5%86%B3%E9%97%AE%E9%A2%98%E7%9A%84%E6%96%B9%E6%A1%88"><span class="nav-number">2.4.</span> <span class="nav-text">1.4、各场景下解决问题的方案</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81MySQL-MVCC%E6%9C%BA%E5%88%B6%E7%BB%BC%E8%BF%B0"><span class="nav-number">3.</span> <span class="nav-text">二、MySQL-MVCC机制综述</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1%E3%80%81MVCC%E6%8A%80%E6%9C%AF%E5%9C%A8%E6%97%A5%E5%B8%B8%E7%94%9F%E6%B4%BB%E4%B8%AD%E7%9A%84%E4%BD%93%E7%8E%B0"><span class="nav-number">3.1.</span> <span class="nav-text">2.1、MVCC技术在日常生活中的体现</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2%E3%80%81MySQL-MVCC%E5%A4%9A%E7%89%88%E6%9C%AC%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6"><span class="nav-number">3.2.</span> <span class="nav-text">2.2、MySQL-MVCC多版本并发控制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81MySQL-MVCC%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%89%96%E6%9E%90"><span class="nav-number">4.</span> <span class="nav-text">三、MySQL-MVCC机制实现原理剖析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1%E3%80%81InnoDB%E8%A1%A8%E7%9A%84%E9%9A%90%E8%97%8F%E5%AD%97%E6%AE%B5"><span class="nav-number">4.1.</span> <span class="nav-text">3.1、InnoDB表的隐藏字段</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-1%E3%80%81%E9%9A%90%E8%97%8F%E4%B8%BB%E9%94%AE-ROW-ID%EF%BC%886Bytes%EF%BC%89"><span class="nav-number">4.1.1.</span> <span class="nav-text">3.1.1、隐藏主键 - ROW_ID（6Bytes）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-2%E3%80%81%E5%88%A0%E9%99%A4%E6%A0%87%E8%AF%86-Deleted-Bit%EF%BC%881Bytes%EF%BC%89"><span class="nav-number">4.1.2.</span> <span class="nav-text">3.1.2、删除标识 - Deleted_Bit（1Bytes）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-3%E3%80%81%E6%9C%80%E8%BF%91%E6%9B%B4%E6%96%B0%E7%9A%84%E4%BA%8B%E5%8A%A1ID-TRX-ID%EF%BC%886Bytes%EF%BC%89"><span class="nav-number">4.1.3.</span> <span class="nav-text">3.1.3、最近更新的事务ID - TRX_ID（6Bytes）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-4%E3%80%81%E5%9B%9E%E6%BB%9A%E6%8C%87%E9%92%88-ROLL-PTR%EF%BC%887Bytes%EF%BC%89"><span class="nav-number">4.1.4.</span> <span class="nav-text">3.1.4、回滚指针 - ROLL_PTR（7Bytes）</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2%E3%80%81InnoDB%E5%BC%95%E6%93%8E%E7%9A%84Undo-log%E6%97%A5%E5%BF%97"><span class="nav-number">4.2.</span> <span class="nav-text">3.2、InnoDB引擎的Undo-log日志</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3%E3%80%81MVCC%E6%A0%B8%E5%BF%83-ReadView"><span class="nav-number">4.3.</span> <span class="nav-text">3.3、MVCC核心 - ReadView</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4%E3%80%81MVCC%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86"><span class="nav-number">4.4.</span> <span class="nav-text">3.4、MVCC机制实现原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5%E3%80%81RC%E3%80%81RR%E4%B8%8D%E5%90%8C%E7%BA%A7%E5%88%AB%E4%B8%8B%E7%9A%84MVCC%E6%9C%BA%E5%88%B6"><span class="nav-number">4.5.</span> <span class="nav-text">3.5、RC、RR不同级别下的MVCC机制</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81MVCC%E6%9C%BA%E5%88%B6%E7%AF%87%E6%80%BB%E7%BB%93"><span class="nav-number">5.</span> <span class="nav-text">四、MVCC机制篇总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/mysql-mvcc.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="mysql的mvcc机制 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql的mvcc机制
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-11-22 18:08:33" itemprop="dateCreated datePublished" datetime="2022-11-22T18:08:33+08:00">2022-11-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/mysql%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">mysql数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-mvcc.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql的mvcc机制" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>13k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>12 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <ul>
+<li><a href="#%E5%BC%95%E8%A8%80">引言</a></li>
+<li><a href="#%E4%B8%80%E5%B9%B6%E5%8F%91%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9B%9B%E7%A7%8D%E5%9C%BA%E6%99%AF">一、并发事务的四种场景</a><ul>
+<li><a href="#11%E8%AF%BB-%E8%AF%BB%E5%9C%BA%E6%99%AF">1.1、读-读场景</a></li>
+<li><a href="#12%E5%86%99-%E5%86%99%E5%9C%BA%E6%99%AF">1.2、写-写场景</a></li>
+<li><a href="#13%E8%AF%BB-%E5%86%99%E5%86%99-%E8%AF%BB%E5%9C%BA%E6%99%AF">1.3、读-写、写-读场景</a></li>
+<li><a href="#14%E5%90%84%E5%9C%BA%E6%99%AF%E4%B8%8B%E8%A7%A3%E5%86%B3%E9%97%AE%E9%A2%98%E7%9A%84%E6%96%B9%E6%A1%88">1.4、各场景下解决问题的方案</a><span id="more"></span></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%8Cmysql-mvcc%E6%9C%BA%E5%88%B6%E7%BB%BC%E8%BF%B0">二、MySQL-MVCC机制综述</a><ul>
+<li><a href="#21mvcc%E6%8A%80%E6%9C%AF%E5%9C%A8%E6%97%A5%E5%B8%B8%E7%94%9F%E6%B4%BB%E4%B8%AD%E7%9A%84%E4%BD%93%E7%8E%B0">2.1、MVCC技术在日常生活中的体现</a></li>
+<li><a href="#22mysql-mvcc%E5%A4%9A%E7%89%88%E6%9C%AC%E5%B9%B6%E5%8F%91%E6%8E%A7%E5%88%B6">2.2、MySQL-MVCC多版本并发控制</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89mysql-mvcc%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86%E5%89%96%E6%9E%90">三、MySQL-MVCC机制实现原理剖析</a><ul>
+<li><a href="#31innodb%E8%A1%A8%E7%9A%84%E9%9A%90%E8%97%8F%E5%AD%97%E6%AE%B5">3.1、InnoDB表的隐藏字段</a><ul>
+<li><a href="#311%E9%9A%90%E8%97%8F%E4%B8%BB%E9%94%AE---row_id6bytes">3.1.1、隐藏主键 - ROW_ID（6Bytes）</a></li>
+<li><a href="#312%E5%88%A0%E9%99%A4%E6%A0%87%E8%AF%86---deleted_bit1bytes">3.1.2、删除标识 - Deleted_Bit（1Bytes）</a></li>
+<li><a href="#313%E6%9C%80%E8%BF%91%E6%9B%B4%E6%96%B0%E7%9A%84%E4%BA%8B%E5%8A%A1id---trx_id6bytes">3.1.3、最近更新的事务ID - TRX_ID（6Bytes）</a></li>
+<li><a href="#314%E5%9B%9E%E6%BB%9A%E6%8C%87%E9%92%88---roll_ptr7bytes">3.1.4、回滚指针 - ROLL_PTR（7Bytes）</a></li>
+</ul>
+</li>
+<li><a href="#32innodb%E5%BC%95%E6%93%8E%E7%9A%84undo-log%E6%97%A5%E5%BF%97">3.2、InnoDB引擎的Undo-log日志</a></li>
+<li><a href="#33mvcc%E6%A0%B8%E5%BF%83---readview">3.3、MVCC核心 - ReadView</a></li>
+<li><a href="#34mvcc%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86">3.4、MVCC机制实现原理</a></li>
+<li><a href="#35rcrr%E4%B8%8D%E5%90%8C%E7%BA%A7%E5%88%AB%E4%B8%8B%E7%9A%84mvcc%E6%9C%BA%E5%88%B6">3.5、RC、RR不同级别下的MVCC机制</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9Bmvcc%E6%9C%BA%E5%88%B6%E7%AF%87%E6%80%BB%E7%BB%93">四、MVCC机制篇总结</a></li>
+</ul>
+<h2 id="引言"><a href="#引言" class="headerlink" title="引言"></a>引言</h2><p>   在<a target="_blank" rel="noopener" href="https://juejin.cn/post/7153869469394305061" title="https://juejin.cn/post/7153869469394305061">《MySQL锁机制》</a>这篇文章中，咱们全面剖析了<code>MySQL</code>提供的锁机制，对于并发事务通常可以通过其提供的各类锁，去确保各场景下的线程安全问题，从而能够防止脏写、脏读、不可重复读及幻读这类问题出现。</p>
+<blockquote>
+<p>不过成也萧何败也萧何，虽然<code>MySQL</code>提供的锁机制确实能解决并发事务带来的一系列问题，但由于加锁后会让一部分事务串行化，而<code>MySQL</code>本身就是基于磁盘实现的，性能无法跟内存型数据库娉美，因此并发事务串行化会使其效率更低。</p>
+</blockquote>
+<p>也正是由于上述原因，因此<code>MySQL</code>官方在设计时，抓破脑袋的想：<strong>有没有办法再快一点！</strong>！最终，<code>MVCC</code>机制就诞生了，相较于加锁串行化执行，<code>MVCC</code>机制的出现，则以另一种形式解决了并发事务造成的问题。</p>
+<h2 id="一、并发事务的四种场景"><a href="#一、并发事务的四种场景" class="headerlink" title="一、并发事务的四种场景"></a>一、并发事务的四种场景</h2><p>   并发事务中又会分为四种情况，分别是读-读、写-写、读-写、写-读，这四种情况分别对应并发事务执行时的四种场景，为了后续分析<code>MVCC</code>机制时方便理解，因此先将这几种情况说明，咱们首先来看看读-读场景。</p>
+<h3 id="1-1、读-读场景"><a href="#1-1、读-读场景" class="headerlink" title="1.1、读-读场景"></a>1.1、读-读场景</h3><p>   读-读场景即是指多个事务&#x2F;线程在一起读取一个相同的数据，比如事务<code>T1</code>正在读取<code>ID=88</code>的行记录，事务<code>T2</code>也在读取这条记录，两个事务之间是并发执行的。</p>
+<blockquote>
+<p>广为人知的一点：<code>MySQL</code>执行查询语句，绝对不会对引起数据的任何变化，因此对于这种情况而言，不需要做任何操作，因为不改变数据就不会引起任何并发问题。</p>
+</blockquote>
+<h3 id="1-2、写-写场景"><a href="#1-2、写-写场景" class="headerlink" title="1.2、写-写场景"></a>1.2、写-写场景</h3><p>   写-写场景也比较简单，也就是指多个事务之间一起对同一数据进行写操作，比如事务<code>T1</code>对<code>ID=88</code>的行记录做修改操作，事务<code>T2</code>则对这条数据做删除操作，事务<code>T1</code>提交事务后想查询看一下，哦豁，结果连这条数据都不见了，这也是所谓的脏写问题，也被称为更新覆盖问题，对于这个问题在所有数据库、所有隔离级别中都是零容忍的存在，最低的隔离级别也要解决这个问题。</p>
+<h3 id="1-3、读-写、写-读场景"><a href="#1-3、读-写、写-读场景" class="headerlink" title="1.3、读-写、写-读场景"></a>1.3、读-写、写-读场景</h3><p>   读-写、写-读实际上从宏观角度来看，可以理解成同一种类型的操作，但从微观角度而言则是两种不同的情况，读-写是指一个事务先开始读，然后另一个事务则过来执行写操作，写-读则相反，主要是读、写发生的前后顺序的区别。</p>
+<blockquote>
+<p>并发事务中同时存在读、写两类操作时，这是最容易出问题的场景，脏读、不可重复读、幻读都出自于这种场景中，当有一个事务在做写操作时，读的事务中就有可能出现这一系列问题，因此数据库才会引入各种机制解决。</p>
+</blockquote>
+<h3 id="1-4、各场景下解决问题的方案"><a href="#1-4、各场景下解决问题的方案" class="headerlink" title="1.4、各场景下解决问题的方案"></a>1.4、各场景下解决问题的方案</h3><p>   在<a target="_blank" rel="noopener" href="https://juejin.cn/post/7153869469394305061" title="https://juejin.cn/post/7153869469394305061">《MySQL锁机制》</a>中，对于写-写、读-写、写-读这三类场景，都是利用加锁的方案确保线程安全，但上面说到过，加锁会导致部分事务串行化，因此效率会下降，而<code>MVCC</code>机制的诞生则解决了这个问题。</p>
+<blockquote>
+<p>先来设想一个问题：加锁的目的是什么？防止脏写、脏读、不可重复读及幻读这类问题出现。</p>
+</blockquote>
+<p>对于脏写问题，这是写-写场景下会出现的，写-写场景必须要加锁才能保障安全，因此先将该场景排除在外。再想想：对于读-写并存的场景中，脏读、不可重复读及幻读问题都出自该场景中，但实际项目中，出现这些问题的几率本身就比较小，为了防止一些小概念事件，就将所有操纵同一数据的并发读写事务串行化，这似乎有些不讲道理呀，就好比：</p>
+<blockquote>
+<p>为了防止自家保险柜中的<code>3.25</code>元被偷，所以每天从早到晚一直守着保险柜，这合理吗？并不合理，毕竟只有千日做贼，那有千日防贼的道理。</p>
+</blockquote>
+<p>因此<code>MySQL</code>就基于读-写并存的场景，推出了<code>MVCC</code>机制，在线程安全问题和加锁串行化之间做了一定取舍，让两者之间达到了很好的平衡，即防止了脏读、不可重复读及幻读问题的出现，又无需对并发读-写事务加锁处理。</p>
+<blockquote>
+<p>咋做到的呢？接下来一起来好好聊一聊大名鼎鼎的<code>MVCC</code>机制。</p>
+</blockquote>
+<h2 id="二、MySQL-MVCC机制综述"><a href="#二、MySQL-MVCC机制综述" class="headerlink" title="二、MySQL-MVCC机制综述"></a>二、MySQL-MVCC机制综述</h2><p>   <code>MVCC</code>机制的全称为<code>Multi-Version Concurrency Control</code>，即多版本并发控制技术，主要是为了提升数据库并发性能而设计的，其中采用更好的方式处理了读-写并发冲突，做到即使有读写冲突时，也可以不加锁解决，从而确保了任何时刻的读操作都是非阻塞的。</p>
+<blockquote>
+<p>但与其说是<code>MySQL-MVCC</code>机制，还不如说是<code>InnoDB-MVCC</code>机制，因为在<code>MySQL</code>众多的开源存储引擎中，几乎只有<code>InnoDB</code>实现了<code>MVCC</code>机制，类似于<code>MyISAM、Memory</code>等引擎中都未曾实现，那其他引擎为何不实现呢？不是不想，而是做不到，这跟<code>MVCC</code>机制的实现原理有关，这点放在后续详细讲解~</p>
+</blockquote>
+<p>不过为了更好的理解啥叫<code>MVCC</code>多版本并发控制，先来看一个日常生活的例子~</p>
+<h3 id="2-1、MVCC技术在日常生活中的体现"><a href="#2-1、MVCC技术在日常生活中的体现" class="headerlink" title="2.1、MVCC技术在日常生活中的体现"></a>2.1、MVCC技术在日常生活中的体现</h3><p>   不知道各位小伙伴中，是否有人做过论坛这类业务的项目，或者类似审核的业务需求，以掘金的文章为例，此时来思考一个场景：</p>
+<blockquote>
+<p>假设我发布了一篇关于<a target="_blank" rel="noopener" href="https://juejin.cn/post/7152765784299667487" title="https://juejin.cn/post/7152765784299667487">《MySQL事务机制》</a>的文章，发布后挺受欢迎的，因此有不少小伙伴在看，其中有一位小伙伴比较细心，文中存在两三个错别字，被这位小伙伴指出来了，因此我去修正错别字后重新发布。</p>
+</blockquote>
+<p>问题来了，对于文章首次发布也好，重新发布也罢，绝对要等审核通过后才会正式发布的，那我修正文章后重新发布，文章又会进入「审核中」这个状态，此时对于其他正在看、准备看的小伙伴来说，文章是不是就不见了？毕竟文章还在审核撒，因此对这个业务需求又该如何实现呢？多版本！</p>
+<blockquote>
+<p>啥意思呢？也就是说，对于首次发布后通过审核的文章，在后续重新发布审核时，用户可以看到更新前的文章，也就是看到老版本的文章，当更新后的文章审核通过后，再使用新版本的文章代替老版本的文章即可。</p>
+</blockquote>
+<p>这样就能做到新老版本的兼容，也能够确保文章修正时，其他正在阅读的小伙伴不会受影响，而<code>MySQL-MVCC</code>机制的思想也大致相同。</p>
+<h3 id="2-2、MySQL-MVCC多版本并发控制"><a href="#2-2、MySQL-MVCC多版本并发控制" class="headerlink" title="2.2、MySQL-MVCC多版本并发控制"></a>2.2、MySQL-MVCC多版本并发控制</h3><p>   <code>MySQL</code>中的多版本并发控制，也和上面给出的例子类似，毕竟回想一下，脏读、不可重复读、幻读问题都是由于多个事务并发读写导致的，但这些问题都是基于最新版本的数据并发操作才会出现，那如果读、写的事务操作的不是同一个版本呢？比如写操作走新版本，读操作走老版本，这样是不是无论执行写操作的事务干了啥，都不会影响读的事务？答案是<code>Yes</code>。</p>
+<blockquote>
+<p>不过要稍微记住，<code>MySQL</code>中仅在<code>RC</code>读已提交级别、<code>RR</code>不可重复读级别才会使用<code>MVCC</code>机制，<code>Why</code>？</p>
+</blockquote>
+<p>因为如果是<code>RU</code>读未提交级别，既然都允许存在脏读问题、允许一个事务读取另一个事务未提交的数据，那自然可以直接读最新版本的数据，因此无需<code>MVCC</code>介入。</p>
+<p>同时如若是<code>Serializable</code>串行化级别，因为会将所有的并发事务串行化处理，也就是不论事务是读操作，亦或是写操作，都会被排好队一个个执行，这都不存在所谓的多线程并发问题了，自然也无需<code>MVCC</code>介入。</p>
+<blockquote>
+<p>因此要牢记：<code>MVCC</code>机制在<code>MySQL</code>中，仅有<code>InnoDB</code>引擎支持，而在该引擎中，<code>MVCC</code>机制只对<code>RC、RR</code>两个隔离级别下的事务生效。当然，<code>RC、RR</code>两个不同的隔离级别中，<code>MVCC</code>的实现也存在些许差异，对于这点后续详细讲解。</p>
+</blockquote>
+<h2 id="三、MySQL-MVCC机制实现原理剖析"><a href="#三、MySQL-MVCC机制实现原理剖析" class="headerlink" title="三、MySQL-MVCC机制实现原理剖析"></a>三、MySQL-MVCC机制实现原理剖析</h2><p>   OK~，简单理解了啥叫<code>MVCC</code>机制后，接着一起来看看<code>InnoDB</code>引擎是如何实现它的，<code>MVCC</code>机制主要通过隐藏字段、<code>Undo-log</code>日志、<code>ReadView</code>这三个东西实现的，因而这三玩意儿也被称为“<code>MVCC</code>三剑客”！废话不多说，一起来看看。</p>
+<h3 id="3-1、InnoDB表的隐藏字段"><a href="#3-1、InnoDB表的隐藏字段" class="headerlink" title="3.1、InnoDB表的隐藏字段"></a>3.1、InnoDB表的隐藏字段</h3><p>   通常而言，当你基于<code>InnoDB</code>引擎建立一张表后，<code>MySQL</code>除开会构建你显式声明的字段外，通常还会构建一些<code>InnoDB</code>引擎的隐藏字段，在<code>InnoDB</code>引擎中主要有<code>DB_ROW_ID、DB_Deleted_Bit、DB_TRX_ID、DB_ROLL_PTR</code>这四个隐藏字段，挨个简单介绍一下。</p>
+<h4 id="3-1-1、隐藏主键-ROW-ID（6Bytes）"><a href="#3-1-1、隐藏主键-ROW-ID（6Bytes）" class="headerlink" title="3.1.1、隐藏主键 - ROW_ID（6Bytes）"></a>3.1.1、隐藏主键 - ROW_ID（6Bytes）</h4><p>在之前介绍<a target="_blank" rel="noopener" href="https://juejin.cn/post/7151275584218202143" title="https://juejin.cn/post/7151275584218202143">《索引原理篇》</a>的时候聊到过一点，对于<code>InnoDB</code>引擎的表而言，由于其表数据是按照聚簇索引的格式存储，因此通常都会选择主键作为聚簇索引列，然后基于主键字段构建索引树，但如若表中未定义主键，则会选择一个具备唯一非空属性的字段，作为聚簇索引的字段来构建树。</p>
+<blockquote>
+<p>当两者都不存在时，<code>InnoDB</code>就会隐式定义一个顺序递增的列<code>ROW_ID</code>来作为聚簇索引列。</p>
+</blockquote>
+<p>因此要牢记一点，如果你选择的引擎是<code>InnoDB</code>，就算你的表中未定义主键、索引，其实默认也会存在一个聚簇索引，只不过这个索引在上层无法使用，仅提供给<code>InnoDB</code>构建树结构存储表数据。</p>
+<h4 id="3-1-2、删除标识-Deleted-Bit（1Bytes）"><a href="#3-1-2、删除标识-Deleted-Bit（1Bytes）" class="headerlink" title="3.1.2、删除标识 - Deleted_Bit（1Bytes）"></a>3.1.2、删除标识 - Deleted_Bit（1Bytes）</h4><p>在之前讲<a target="_blank" rel="noopener" href="https://juejin.cn/post/7145102393988874253#heading-11" title="https://juejin.cn/post/7145102393988874253#heading-11">《SQL执行篇-写SQL执行原理》</a>时，咱们只粗略的过了一下大体流程，其中并未涉及到一些细节阐述，在这里稍微提一下：对于一条<code>delete</code>语句而言，当执行后并不会立马删除表的数据，而是将这条数据的<code>Deleted_Bit</code>删除标识改为<code>1/true</code>，后续的查询<code>SQL</code>检索数据时，如果检索到了这条数据，但看到隐藏字段<code>Deleted_Bit=1</code>时，就知道该数据已经被其他事务<code>delete</code>了，因此不会将这条数据纳入结果集。</p>
+<blockquote>
+<p>OK~，但设计<code>Deleted_Bit</code>这个隐藏字段的好处是什么呢？主要是能够有利于聚簇索引，比如当一个事务中删除一条数据后，后续又执行了回滚操作，假设此时是真正的删除了表数据，会发生什么情况呢？</p>
+</blockquote>
+<ul>
+<li>①删除表数据时，有可能会破坏索引树原本的结构，导致出现叶子节点合并的情况。</li>
+<li>②事务回滚时，又需重新插入这条数据，再次插入时又会破坏前面的结构，导致叶子节点分裂。</li>
+</ul>
+<blockquote>
+<p>综上所述，如果执行<code>delete</code>语句就删除真实的表数据，由于事务回滚的问题，就很有可能导致聚簇索引树发生两次结构调整，这其中的开销可想而知，而且先删除，再回滚，最终树又变成了原状，那这两次树的结构调整还是无意义的。</p>
+</blockquote>
+<p>所以，当执行<code>delete</code>语句时，只会改变将隐藏字段中的删除标识改为<code>1/true</code>，如果后续事务出现回滚动作，直接将其标识再改回<code>0/false</code>即可，这样就避免了索引树的结构调整。</p>
+<blockquote>
+<p>但如若事务删除数据之后提交了事务呢？总不能让这条数据一直留在磁盘吧？毕竟如果所有的<code>delete</code>操作都这么干，就会导致磁盘爆满~，显然这样是不妥的，因此删除标识为<code>1/true</code>的数据最终依旧会从磁盘中移除，啥时候移呢？</p>
+</blockquote>
+<p>在之前讲<a target="_blank" rel="noopener" href="https://juejin.cn/post/7112826654291918855#heading-9" title="https://juejin.cn/post/7112826654291918855#heading-9">《Nginx-缓存清理》</a>时，曾经提到过<code>purger</code>这一系列的参数，通过配置该系列参数后，<code>Nginx</code>后台中会创建对应的<code>purger</code>线程去自动删除缓存数据。而<code>MySQL</code>中也不例外，同样存在<code>purger</code>线程的概念，为了防止“已删除”的数据占用过多的磁盘空间，<code>purger</code>线程会自动清理<code>Deleted_Bit=1/true</code>的行数据。</p>
+<blockquote>
+<p>当然，为了确保清理数据时不会影响<code>MVCC</code>的正常工作，<code>purger</code>线程自身也会维护一个<code>ReadView</code>，如果某条数据的<code>Deleted_Bit=true</code>，并且<code>TRX_ID</code>对<code>purge</code>线程的<code>ReadView</code>可见，那么这条数据一定是可以被安全清除的（即不会影响<code>MVCC</code>工作）。</p>
+</blockquote>
+<p><em>对于上述最后一段大家可能会有些许疑惑，这是因为还未曾介绍<code>ReadView</code>，因此有些不理解可先跳过，后续理解了<code>ReadView</code>后再回来看会好很多。</em></p>
+<h4 id="3-1-3、最近更新的事务ID-TRX-ID（6Bytes）"><a href="#3-1-3、最近更新的事务ID-TRX-ID（6Bytes）" class="headerlink" title="3.1.3、最近更新的事务ID - TRX_ID（6Bytes）"></a>3.1.3、最近更新的事务ID - TRX_ID（6Bytes）</h4><p><code>TRX_ID</code>全称为<code>transaction_id</code>，翻译过来也就是事务<code>ID</code>的意思，<code>MySQL</code>对于每一个创建的事务，都会为其分配一个事务<code>ID</code>，事务<code>ID</code>同样遵循顺序递增的特性，即后来的事务<code>ID</code>绝对会比之前的<code>ID</code>要大，比如：</p>
+<blockquote>
+<p>此时事务<code>T1</code>准备修改表字段的值，<code>MySQL</code>会为其分配一个事务<code>ID=1</code>，当事务<code>T2</code>准备向表中插入一条数据时，又会为这个事务分配一个<code>ID=2</code>……</p>
+</blockquote>
+<p>但有一个细节点需要记住：<code>MySQL</code>对于所有包含写入<code>SQL</code>的事务，会为其分配一个顺序递增的事务<code>ID</code>，但如果是一条<code>select</code>查询语句，则分配的事务<code>ID=0</code>。</p>
+<blockquote>
+<p>不过对于手动开启的事务，<code>MySQL</code>都会为其分配事务<code>ID</code>，就算这个手动开启的事务中仅有<code>select</code>操作。</p>
+</blockquote>
+<p>表中的隐藏字段<code>TRX_ID</code>，记录的就是最近一次改动当前这条数据的事务<code>ID</code>，这个字段是实现<code>MVCC</code>机制的核心之一。</p>
+<h4 id="3-1-4、回滚指针-ROLL-PTR（7Bytes）"><a href="#3-1-4、回滚指针-ROLL-PTR（7Bytes）" class="headerlink" title="3.1.4、回滚指针 - ROLL_PTR（7Bytes）"></a>3.1.4、回滚指针 - ROLL_PTR（7Bytes）</h4><p><code>ROLL_PTR</code>全称为<code>rollback_pointer</code>，也就是回滚指针的意思，这个也是表中每条数据都会存在的一个隐藏字段，当一个事务对一条数据做了改动后，都会将旧版本的数据放到<code>Undo-log</code>日志中，而<code>rollback_pointer</code>就是一个地址指针，指向<code>Undo-log</code>日志中旧版本的数据，当需要回滚事务时，就可以通过这个隐藏列，来找到改动之前的旧版本数据，而<code>MVCC</code>机制也利用这点，实现了行数据的多版本。</p>
+<h3 id="3-2、InnoDB引擎的Undo-log日志"><a href="#3-2、InnoDB引擎的Undo-log日志" class="headerlink" title="3.2、InnoDB引擎的Undo-log日志"></a>3.2、InnoDB引擎的Undo-log日志</h3><p>   在之前<a target="_blank" rel="noopener" href="https://juejin.cn/post/7152765784299667487" title="https://juejin.cn/post/7152765784299667487">《事务篇》</a>中分析事务实现原理时，咱们得知了<code>MySQL</code>事务机制是基于<code>Undo-log</code>实现的，同时在刚刚在聊回滚指针时，聊到了<code>Undo-log</code>日志中会存储旧版本的数据，但要注意：<code>Undo-log</code>中并不仅仅只存储一条旧版本数据，其实在该日志中会有一个版本链，啥意思呢？举个例子：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_name <span class="operator">=</span> &quot;竹子&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_sex <span class="operator">=</span> &quot;男&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>比如上述这段<code>SQL</code>隶属于<code>trx_id=1</code>的<code>T1</code>事务，其中对同一条数据改动了两次，那<code>Undo-log</code>日志中只会存储一条旧版本数据吗？<code>NO</code>，答案是两条旧版本的数据，如下图：<br><img data-src="/../images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png" alt="Undo版本链"><br>从上图中可明显看出：不同的旧版本数据，会以<code>roll_ptr</code>回滚指针作为链接点，然后将所有的旧版本数据组成一个单向链表。但要注意一点：最新的旧版本数据，都会插入到链表头中，而不是追加到链表尾部。</p>
+<blockquote>
+<p>细说一下执行上述<code>update</code>语句的详细过程：<br>①对<code>ID=1</code>这条要修改的行数据加上排他锁。<br>②将原本的旧数据拷贝到<code>Undo-log</code>的<code>rollback Segment</code>区域。<br>③对表数据上的记录进行修改，修改完成后将隐藏字段中的<code>trx_id</code>改为当前事务<code>ID</code>。<br>④将隐藏字段中的<code>roll_ptr</code>指向<code>Undo-log</code>中对应的旧数据，并在提交事务后释放锁。</p>
+</blockquote>
+<p>为什么<code>Undo-log</code>日志要设计出版本链呢？两个好处：一方面可以实现事务点回滚（这点回去参考事务篇），另一方面则可以实现<code>MVCC</code>机制（这点后面聊）。</p>
+<blockquote>
+<p>与之前的删除标识类似，一条数据被<code>delete</code>后并提交了，最终会从磁盘移除，而<code>Undo-log</code>中记录的旧版本数据，同样会占用空间，因此在事务提交后也会移除，移除的工作同样由<code>purger</code>线程负责，<code>purger</code>线程内部也会维护一个<code>ReadView</code>，它会以此作为判断依据，来决定何时移除<code>Undo</code>记录。</p>
+</blockquote>
+<h3 id="3-3、MVCC核心-ReadView"><a href="#3-3、MVCC核心-ReadView" class="headerlink" title="3.3、MVCC核心 - ReadView"></a>3.3、MVCC核心 - ReadView</h3><p>   <code>MVCC</code>在前面聊到过，它翻译过来就是多版本并发控制的意思，对于这个名词中的多版本已经通过<code>Undo-log</code>日志实现了，但再思考一个问题：如果<code>T2</code>事务要查询一条行数据，此时这条行数据正在被<code>T1</code>事务写，那也就代表着这条数据可能存在多个旧版本数据，<code>T2</code>事务在查询时，应该读这条数据的哪个版本呢？此时就需要用到<code>ReadView</code>，用它来做多版本的并发控制，根据查询的时机来选择一个当前事务可见的旧版本数据读取。</p>
+<blockquote>
+<p>那究竟什么是<code>ReadView</code>呢？就是一个事务在尝试读取一条数据时，<code>MVCC</code>基于当前<code>MySQL</code>的运行状态生成的快照，也被称之为读视图，即<code>ReadView</code>，在这个快照中记录者当前所有活跃事务的<code>ID</code>（活跃事务是指还在执行的事务，即未结束（提交&#x2F;回滚）的事务）。</p>
+</blockquote>
+<p>当一个事务启动后，首次执行<code>select</code>操作时，<code>MVCC</code>就会生成一个数据库当前的<code>ReadView</code>，通常而言，一个事务与一个<code>ReadView</code>属于一对一的关系（不同隔离级别下也会存在细微差异），<code>ReadView</code>一般包含四个核心内容：</p>
+<ul>
+<li><code>creator_trx_id</code>：代表创建当前这个<code>ReadView</code>的事务<code>ID</code>。</li>
+<li><code>trx_ids</code>：表示在生成当前<code>ReadView</code>时，系统内活跃的事务<code>ID</code>列表。</li>
+<li><code>up_limit_id</code>：活跃的事务列表中，最小的事务<code>ID</code>。</li>
+<li><code>low_limit_id</code>：表示在生成当前<code>ReadView</code>时，系统中要给下一个事务分配的<code>ID</code>值。</li>
+</ul>
+<p>上面四个值很简单，值得一提的是<code>low_limit_id</code>，它并不是目前系统中活跃事务的最大<code>ID</code>，因为之前讲到过，<code>MySQL</code>的事务<code>ID</code>是按序递增的，因此当启动一个新的事务时，都会为其分配事务<code>ID</code>，而这个<code>low_limit_id</code>则是整个<code>MySQL</code>中，要为下一个事务分配的<code>ID</code>值。</p>
+<p>下面上个<code>ReadView</code>的示意图，来好好理解一下它：<br><img data-src="/../images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/4a7bdb03908c4c95850e3efa0d18e599~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png" alt="ReadView"><br>假设目前数据库中共有<code>T1~T5</code>这五个事务，<code>T1、T2、T4</code>还在执行，<code>T3</code>已经回滚，<code>T5</code>已经提交，此时当有一条查询语句执行时，就会利用<code>MVCC</code>机制生成一个<code>ReadView</code>，由于前面讲过，单纯由一条<code>select</code>语句组成的事务并不会分配事务<code>ID</code>，因此默认为<code>0</code>，所以目前这个快照的信息如下：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;creator_trx_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;0&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;trx_ids&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;[1,2,4]&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;up_limit_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;1&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;low_limit_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;6&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>OK~，简单明白<code>ReadView</code>的结构后，接着一起来聊一聊<code>MVCC</code>机制的实现原理。</p>
+<h3 id="3-4、MVCC机制实现原理"><a href="#3-4、MVCC机制实现原理" class="headerlink" title="3.4、MVCC机制实现原理"></a>3.4、MVCC机制实现原理</h3><p>   将“<code>MVCC</code>三剑客”的概念阐述完毕后，再结合三者来谈谈<code>MVCC</code>的实现，其实也比较简单，经过前面的讲解后已得知：</p>
+<ul>
+<li>①当一个事务尝试改动某条数据时，会将原本表中的旧数据放入<code>Undo-log</code>日志中。</li>
+<li>②当一个事务尝试查询某条数据时，<code>MVCC</code>会生成一个<code>ReadView</code>快照。</li>
+</ul>
+<p>其中<code>Undo-log</code>主要实现数据的多版本，<code>ReadView</code>则主要实现多版本的并发控制，还是以之前的例子来举例说明：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务T1：trx_id=1</span></span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_name <span class="operator">=</span> &quot;竹子&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_sex <span class="operator">=</span> &quot;男&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务T2：trx_id=2</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>目前存在<code>T1、T2</code>两个并发事务，<code>T1</code>目前在修改<code>ID=1</code>的这条数据，而<code>T2</code>则准备查询这条数据，那么<code>T2</code>在执行时具体过程是怎么回事呢？如下：</p>
+<ul>
+<li>①当事务中出现<code>select</code>语句时，会先根据<code>MySQL</code>的当前情况生成一个<code>ReadView</code>。</li>
+<li>②判断行数据中的隐藏列<code>trx_id</code>与<code>ReadView.creator_trx_id</code>是否相同：<ul>
+<li>相同：代表创建<code>ReadView</code>和修改行数据的事务是同一个，自然可以读取最新版数据。</li>
+<li>不相同：代表目前要查询的数据，是被其他事务修改过的，继续往下执行。</li>
+</ul>
+</li>
+<li>③判断隐藏列<code>trx_id</code>是否小于<code>ReadView.up_limit_id</code>最小活跃事务<code>ID</code>：<ul>
+<li>小于：代表改动行数据的事务在创建快照前就已结束，可以读取最新版本的数据。</li>
+<li>不小于：则代表改动行数据的事务还在执行，因此需要继续往下判断。</li>
+</ul>
+</li>
+<li>④判断隐藏列<code>trx_id</code>是否小于<code>ReadView.low_limit_id</code>这个值：<ul>
+<li>大于或等于：代表改动行数据的事务是生成快照后才开启的，因此不能访问最新版数据。</li>
+<li>小于：表示改动行数据的事务<code>ID</code>在<code>up_limit_id、low_limit_id</code>之间，需要进一步判断。</li>
+</ul>
+</li>
+<li>⑤如果隐藏列<code>trx_id</code>小于<code>low_limit_id</code>，继续判断<code>trx_id</code>是否在<code>trx_ids</code>中：<ul>
+<li>在：表示改动行数据的事务目前依旧在执行，不能访问最新版数据。</li>
+<li>不在：表示改动行数据的事务已经结束，可以访问最新版的数据。</li>
+</ul>
+</li>
+</ul>
+<p>说简单一点，就是首先会去获取表中行数据的隐藏列，然后经过上述一系列判断后，可以得知：<strong>目前查询数据的事务到底能不能访问最新版的数据</strong>。如果能，就直接拿到表中的数据并返回，反之，不能则去<code>Undo-log</code>日志中获取旧版本的数据返回。</p>
+<blockquote>
+<p>注意：假设<code>Undo-log</code>日志中存在版本链怎么办？该获取哪个版本的旧数据呢？</p>
+</blockquote>
+<p>如果<code>Undo-log</code>日志中的旧数据存在一个版本链时，此时会首先根据隐藏列<code>roll_ptr</code>找到链表头，然后依次遍历整个列表，从而检索到最合适的一条数据并返回。但在这个遍历过程中，是如何判断一个旧版本的数据是否合适的呢？条件如下：</p>
+<ul>
+<li>旧版本的数据，其隐藏列<code>trx_id</code>不能在<code>ReadView.trx_ids</code>活跃事务列表中。</li>
+</ul>
+<p>因为如果旧版本的数据，其<code>trx_id</code>依旧在<code>ReadView.trx_ids</code>中，就代表着产生这条旧数据的事务还未提交，自然不能读取这个版本的数据，以前面给出的例子来说明：<br><img data-src="/../images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png" alt="Undo版本链"><br>这是由事务<code>T1</code>生成的版本链，此时<code>T2</code>生成的<code>ReadView</code>如下：</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">    <span class="attr">&quot;creator_trx_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;0&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;trx_ids&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;[1]&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;up_limit_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;1&quot;</span><span class="punctuation">,</span></span><br><span class="line">    <span class="attr">&quot;low_limit_id&quot;</span> <span class="punctuation">:</span> <span class="string">&quot;2&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>结合这个<code>ReadView</code>信息，经过前面那一系列判断后，最终会得到：不能读取最新版数据，因此需要去<code>Undo-log</code>的版本链中读数据，首先根据<code>roll_ptr</code>找到第一条旧数据：<br><img data-src="/../images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/9921fcbf353f4dbba802f706034e03c7~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png" alt="第一条旧数据"><br>此时发现其<code>trx_id=1</code>，位于<code>ReadView.trx_ids</code>中，因此不能读取这条旧数据，接着再根据这条旧数据的<code>roll_ptr</code>找到第二条旧版本数据：<br><img data-src="/../images/pic/mysql%E7%9A%84mvcc%E6%9C%BA%E5%88%B6/e191761e5fac43cca83c33585d2d9695~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.png" alt="第二条旧数据"><br>这时再看其<code>trx_id=null</code>，并不位于<code>ReadView.trx_ids</code>中，<code>null</code>表示这条数据在上次<code>MySQL</code>运行时就已插入了，因此这条旧版本的数据可以被<code>T2</code>事务读取，最终<code>T2</code>就会查询到这条数据并返回。</p>
+<blockquote>
+<p>OK~，最后再来看一个场景！即范围查询时，突然出现新增数据怎么办呢？如下：</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users`;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">2</span> <span class="operator">|</span> 竹子      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">1234</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-14</span> <span class="number">16</span>:<span class="number">17</span>:<span class="number">44</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">3</span> <span class="operator">|</span> 子竹      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">4321</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-16</span> <span class="number">07</span>:<span class="number">42</span>:<span class="number">21</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">4</span> <span class="operator">|</span> 猫熊      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">8888</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-27</span> <span class="number">17</span>:<span class="number">22</span>:<span class="number">59</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">9</span> <span class="operator">|</span> 黑竹      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">9999</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-28</span> <span class="number">22</span>:<span class="number">31</span>:<span class="number">44</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- T1事务：查询ID &gt;= 3 的所有用户信息</span></span><br><span class="line"><span class="keyword">select</span> <span class="operator">*</span> <span class="keyword">from</span>  `zz_users` <span class="keyword">where</span> user_id <span class="operator">&gt;=</span> <span class="number">3</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- T2事务：新增一条 ID = 6 的用户记录</span></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> `zz_users` <span class="keyword">VALUES</span>(<span class="number">6</span>,&quot;棕熊&quot;,&quot;男&quot;,&quot;7777&quot;,&quot;2022-10-02 16:21:33&quot;);</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>此时当<code>T1</code>事务查询数据时，突然蹦出来一条<code>ID=6</code>的数据，经过判断之后会发现新增这条数据的事务还在执行，所以要去查询旧版本数据，但此时由于是新增操作，因此<code>roll_ptr=null</code>，即表示没有旧版本数据，此时会不会读取最新版的数据呢？答案是<code>NO</code>，如果查询数据的事务不能读取最新版数据，同时又无法从版本链中找到旧数据，那就意味着这条数据对<code>T1</code>事务完全不可见，因此<code>T1</code>的查询结果中不会包含<code>ID=6</code>的这条新增记录。</p>
+<h3 id="3-5、RC、RR不同级别下的MVCC机制"><a href="#3-5、RC、RR不同级别下的MVCC机制" class="headerlink" title="3.5、RC、RR不同级别下的MVCC机制"></a>3.5、RC、RR不同级别下的MVCC机制</h3><p>   <code>3.4</code>阶段已经将<code>MVCC</code>机制的具体实现过程剖析了一遍，接下来再思考一个问题：</p>
+<blockquote>
+<p><code>ReadView</code>是一个事务中只生成一次，还是每次<code>select</code>时都会生成呢？</p>
+</blockquote>
+<p>这个问题的答案跟事务的隔离机制有关，不同级别的隔离机制也并不同，如果此时<code>MySQL</code>的事务隔离机制处于<code>RC</code>读已提交级别，那此时来看一个例子：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 开启一个事务T1：主要是修改两次ID=1的行数据</span></span><br><span class="line"><span class="keyword">begin</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_name <span class="operator">=</span> &quot;竹子&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_sex <span class="operator">=</span> &quot;男&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 再开启一个事务T2：主要是查询ID=1的行数据</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 此时先提交事务T1</span></span><br><span class="line"><span class="keyword">commit</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">-- 再次在事务T2中查一次ID=1的行数据</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<blockquote>
+<p>先说明一点，为了方便理解，因此我将两个事务的代码贴在了一块，但如若你要做实际的实验，请切记将<code>T1、T2</code>用两个连接来写。</p>
+</blockquote>
+<p>OK~，再来看看上述这个案例，如果是处于<code>RC</code>级别的情况下，<code>T2</code>事务中的查询结果如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 竹子      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>为什么两次查询结果不一样呢？因为<code>RC</code>级别下，<code>MVCC</code>机制是会在每次<code>select</code>语句执行前，都会生成一个<code>ReadView</code>，由于<code>T2</code>事务中第二次查询数据时，<code>T1</code>已经提交了，所以第二次查询就能读到修改后的数据，这是啥问题？不可重复读问题。</p>
+<blockquote>
+<p>接着再来看看<code>RR</code>可重复级别下的<code>MVCC</code>机制，<code>SQL</code>代码和上述一模一样，但查询结果如下：</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users` <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>这又是为啥？为啥明明在<code>T2</code>事务第二次查询前，<code>T1</code>已经提交了，<code>T2</code>依旧查询出的结果和第一次相同呢？这是因为在<code>RR</code>级别中，一个事务只会在首次执行<code>select</code>语句时生成快照，后续所有的<code>select</code>操作都会基于这个<code>ReadView</code>来判断，这样也就解决了<code>RC</code>级别中存在的不可重复问题。</p>
+<blockquote>
+<p>最后简单提一嘴：实际上<code>InnoDB</code>引擎中，是可以在<code>RC</code>级别解决脏读、不可重复读、幻读这一系列问题的，但是为了将事务隔离级别设计的符合<code>DBMS</code>规范，因此在实现时刻意保留了这些问题，然后放在更高的隔离级别中解决~</p>
+</blockquote>
+<h2 id="四、MVCC机制篇总结"><a href="#四、MVCC机制篇总结" class="headerlink" title="四、MVCC机制篇总结"></a>四、MVCC机制篇总结</h2><p>   <code>MVCC</code>多版本并发控制，听起来似乎蛮高大上的，但实际研究起来会发现它并不复杂，其中的多版本主要依赖<code>Undo-log</code>日志来实现，而并发控制则通过表的隐藏字段+<code>ReadView</code>快照来实现，通过<code>Undo-log</code>日志、隐藏字段、<code>ReadView</code>快照这三玩意儿，就实现了<code>MVCC</code>机制，过程还蛮简单的~</p>
+<blockquote>
+<p>到这里，其实对于<code>MySQL</code>的事务隔离机制，已经拨开一部分迷雾了，下篇《MySQL事务与锁机制原理篇》中，则会彻底讲清楚<code>MySQL</code>锁是怎么实现的，以及不同的事务隔离级别，又是如何借助锁+<code>MVCC</code>处理客户端<code>SQL</code>的，那么咱们下篇见~</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/mysql-mvcc.html" title="mysql的mvcc机制">https://tf2jaguar.dpdns.org/mysql-mvcc.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/%E5%8E%9F%E7%90%86/" rel="tag"><i class="fa fa-tag"></i> 原理</a>
+              <a href="/tags/mysql/" rel="tag"><i class="fa fa-tag"></i> mysql</a>
+              <a href="/tags/mvcc%E6%9C%BA%E5%88%B6/" rel="tag"><i class="fa fa-tag"></i> mvcc机制</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/java-shift-operator.html" rel="prev" title="java移位操作符">
+                  <i class="fa fa-chevron-left"></i> java移位操作符
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/spring-circular-dependency.html" rel="next" title="spring的循环依赖">
+                  spring的循环依赖 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

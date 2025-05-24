@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="流程图 ConcurrenthashMap 的 transfer 主要是用于扩容重组阶段，当内部数组的容量值超过阈值时，将触发扩容重组， transfer 是该过程的主要实现。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ConcurrentHashMap的transfer阅读">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="流程图 ConcurrenthashMap 的 transfer 主要是用于扩容重组阶段，当内部数组的容量值超过阈值时，将触发扩容重组， transfer 是该过程的主要实现。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/ConcurrentHashMap%E7%9A%84transfer%E9%98%85%E8%AF%BB/concurrentHashMap-transfer.jpg">
+<meta property="article:published_time" content="2022-02-05T02:59:33.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.467Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="java">
+<meta property="article:tag" content="并发容器">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/ConcurrentHashMap%E7%9A%84transfer%E9%98%85%E8%AF%BB/concurrentHashMap-transfer.jpg">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html","path":"java-ConcurrentHashMap-transfer.html","title":"ConcurrentHashMap的transfer阅读"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>ConcurrentHashMap的transfer阅读 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%B5%81%E7%A8%8B%E5%9B%BE"><span class="nav-number">1.</span> <span class="nav-text">流程图</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5"><span class="nav-number">2.</span> <span class="nav-text">相关概念</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%A7%A3%E6%9E%90"><span class="nav-number">3.</span> <span class="nav-text">解析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#addCount"><span class="nav-number">3.1.</span> <span class="nav-text">addCount</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#transfer"><span class="nav-number">3.2.</span> <span class="nav-text">transfer</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="ConcurrentHashMap的transfer阅读 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ConcurrentHashMap的transfer阅读
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-02-05 10:59:33" itemprop="dateCreated datePublished" datetime="2022-02-05T10:59:33+08:00">2022-02-05</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/java%E7%9B%B8%E5%85%B3/" itemprop="url" rel="index"><span itemprop="name">java相关</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/java-ConcurrentHashMap-transfer.html" class="post-meta-item leancloud_visitors" data-flag-title="ConcurrentHashMap的transfer阅读" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>7k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>6 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <h1 id="流程图"><a href="#流程图" class="headerlink" title="流程图"></a>流程图</h1><p><img data-src="/../images/pic/ConcurrentHashMap%E7%9A%84transfer%E9%98%85%E8%AF%BB/concurrentHashMap-transfer.jpg" alt="concurrentHashMap#transfer"></p>
+<p><code>ConcurrenthashMap</code> 的 <code>transfer</code> 主要是用于扩容重组阶段，当内部数组的容量值超过阈值时，将触发扩容重组， <code>transfer</code> 是该过程的主要实现。</p>
+<span id="more"></span>
+<h1 id="相关概念"><a href="#相关概念" class="headerlink" title="相关概念"></a>相关概念</h1><ol>
+<li><code>ConcurrentHashMap</code> 中，使用一个字段复用了多种功能，如：阈值控制、内部 <code>Node[]</code> 数组状态控制、扩容线程控制 等，该字段就是 <code>sizeCtl</code>。</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 默认为0，用来控制table的初始化和扩容操作</span></span><br><span class="line"><span class="comment"> * -1: 代表table正在初始化</span></span><br><span class="line"><span class="comment"> * -N: 取-N对应的二进制的低16位数值为 M=(sizeCtl&amp;31)，此时有M-1个线程进行扩容</span></span><br><span class="line"><span class="comment"> * </span></span><br><span class="line"><span class="comment"> * 其余情况：</span></span><br><span class="line"><span class="comment"> * 1、如果table未初始化，表示table需要初始化的大小。</span></span><br><span class="line"><span class="comment"> * 2、如果table初始化完成，表示table的容量，默认是table大小的0.75倍</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"> <span class="keyword">private</span> <span class="keyword">transient</span> <span class="keyword">volatile</span> <span class="type">int</span> sizeCtl;</span><br></pre></td></tr></table></figure>
+
+<ol start="2">
+<li><code>ConcurrentHashMap</code> 在重组时，做法与 <code>HashMap</code> 类似，但是具体新的数组，则是使用了内部一个数组变量 <code>nextTable</code> 以保证并发控制。其他如：链表的重组、树结构的重组 流程均是大同小异。</li>
+<li><code>ConcurrentHashMap</code> 的重组采用了跟分段表类似的思想，实际上是将数组划分为不同的分段区间，如果有线程进入，可获取该区间辅助转换。</li>
+<li><code>transferIndex</code> 是 <code>ConcurrentHashMap</code> 的内部属性，主要是在重组阶段中使用，用来表示还未被转换的数组，区间为：<code>table[0] ~ table[transferIndex-1]</code></li>
+<li><code>ConcurrentHashMap</code> 并发转换的过程，借助了 信号量 的概念，只有获取到信号的线程，才能进入辅助转换，而 信号量 则存储在 <code>sizeCtl</code>，每当一个线程进入获取，则 <code>sizeCtl + 1</code>（首个线程开启转换则是 <code>sizeCtl + 2</code>）。主要注意的是，该信号量的初始值为 负数，加入线程将增大 <code>sizeCtl</code>，直到 <code>sizeCtl</code> 的增大达到 0 时，信号量将用完，默认的与 信号量 相加等于 0 的值是：65534，也就是说，最多允许 65534 条线程参与辅助转换（非固定，可调节）。所以可通过 <strong><code>rs + 1 ~ rs + 65534 </code></strong> 的边界控制，来决定线程是否加入辅助转换。让 <code>sizeCtl</code> 成为负数变成信号量的主要代码是： <code>resizeStamp(n) &lt;&lt; RESIZE_STAMP_SHIFT</code></li>
+<li><code>ConcurrentHash</code> 的转换过程中，用到的辅助属性有两个：<code>nextTable</code>，<code>transferIndex</code>，它们属于线程共享的，所以在对他们进行变更时，都是使用了 <code>“自旋/死循环 + CAS”</code> 的方式，实现线程并发安全。</li>
+</ol>
+<h1 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h1><p>转换过程 <code>transfer</code> 的每个调用入口，实际上外部都有对 <code>sizeCtl</code> 进行 <code>自旋 + CAS </code> 的操作。也就是并发情况下，即使多条线程想要进行扩容，那也只有一条线程能够成功，另外的线程则进入辅助扩容的过程</p>
+<h2 id="addCount"><a href="#addCount" class="headerlink" title="addCount"></a>addCount</h2><p>扩容方法进入前的判断如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">addCount</span><span class="params">(<span class="type">long</span> x, <span class="type">int</span> check)</span> &#123;</span><br><span class="line">    <span class="comment">// 省略部分代码...</span></span><br><span class="line">    <span class="comment">// nt -&gt; nextTable</span></span><br><span class="line">    <span class="comment">// n -&gt; num，sc -&gt; sizeCtl</span></span><br><span class="line">    Node&lt;K, V&gt;[] tab, nt;</span><br><span class="line">    <span class="type">int</span> n, sc;</span><br><span class="line">    <span class="comment">// 当前存储大于 75%，且总大小小于最大容量，需要扩容</span></span><br><span class="line">    <span class="keyword">while</span> (s &gt;= (<span class="type">long</span>) (sc = sizeCtl) &amp;&amp; (tab = table) != <span class="literal">null</span> &amp;&amp; (n = tab.length) &lt; MAXIMUM_CAPACITY) &#123;</span><br><span class="line">        <span class="comment">// resizeStamp 纯粹只是移位来保证右 16 位为0，可用来控制作为线程最大数</span></span><br><span class="line">        <span class="comment">// 左 16 位实际并没有保留太多信息（因为明显：resizeStamp(4)、resizeStamp(5)、resizeStamp(6)、(7)</span></span><br><span class="line">        <span class="comment">// 是相同的结果</span></span><br><span class="line">        <span class="type">int</span> <span class="variable">rs</span> <span class="operator">=</span> resizeStamp(n) &lt;&lt; RESIZE_STAMP_SHIFT;</span><br><span class="line">        <span class="keyword">if</span> (sc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="comment">// 限制线程的最大或最小，当达到最大 65534（默认） 或 1 条时，则直接跳出</span></span><br><span class="line">            <span class="comment">// rs + 1 --&gt; 最少线程数（相当于不正确的情况了，或者是初始化，因为起始时最少是 rs + 2）</span></span><br><span class="line">            <span class="comment">// rs + MAX_RESIZERS --&gt; 最多线程数</span></span><br><span class="line">            <span class="comment">// 或其他情况，则不再辅助转移，如：nextable 已为 null 或 transferIndex &lt;= 0（说明已结束）</span></span><br><span class="line">            <span class="comment">// 前两个条件是限制线程数，后两个条件是扩容已经结束</span></span><br><span class="line">            <span class="keyword">if</span> (sc == rs + MAX_RESIZERS || sc == rs + <span class="number">1</span> || (nt = nextTable) == <span class="literal">null</span> || transferIndex &lt;= <span class="number">0</span>)</span><br><span class="line">                <span class="keyword">break</span>;</span><br><span class="line">            <span class="keyword">if</span> (U.compareAndSetInt(<span class="built_in">this</span>, SIZECTL, sc, sc + <span class="number">1</span>))</span><br><span class="line">                transfer(tab, nt);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">// 如果 sc &gt;= 0，说明是刚开始，</span></span><br><span class="line">        <span class="comment">// 因为 sc &lt; 0 时，低16位表示有多少条线程在进行转移：sizeCtl &amp; 31 - 1</span></span><br><span class="line">        <span class="comment">// 所以这里要 rs + 2</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (U.compareAndSetInt(<span class="built_in">this</span>, SIZECTL, sc, rs + <span class="number">2</span>))</span><br><span class="line">            transfer(tab, <span class="literal">null</span>);</span><br><span class="line">        s = sumCount();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这里出现大量的判断比较，容易造成混乱，但主要记住：<strong>这些判断比较，在 <code>ConcurrentHashMap</code> 大部分是边界判断。</strong>记住这点后能够帮助理解大部分的判断比较，比如：<code>sc == rs + MAX_RESIZERS</code> 和 <code>sc == rs + 1 </code>实际上是对线程数的上下界的限制，超过限制，则不进入辅助转换。</p>
+<h2 id="transfer"><a href="#transfer" class="headerlink" title="transfer"></a>transfer</h2><p><code>ConcurrentHashMap</code> 是分段进行并发转换，就是一个数组，按 <strong><code>幅度</code></strong> 划分，然后相应的线程获取到哪个分组，则负责该分组的转换的完成。那么重组转换的出口在哪里呢？只有当所有线程都执行完毕，处理转换的线程的信号量没有被获取了 ，才退出整个转换过程。默认最小幅度是 16，也就是说线程的最少处理元素个数是 16 个。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Node&lt;K,V&gt;[] tab, Node&lt;K,V&gt;[] nextTab)</span> &#123;</span><br><span class="line">	<span class="comment">// stride 幅度</span></span><br><span class="line">	<span class="type">int</span> <span class="variable">n</span> <span class="operator">=</span> tab.length, stride;</span><br><span class="line">	<span class="comment">// 如果 CPU 大于 1，控制最少每个线程的处理量为 16 ==&gt; n / 8 / NCPU</span></span><br><span class="line">	<span class="keyword">if</span> ((stride = (NCPU &gt; <span class="number">1</span>) ? (n &gt;&gt;&gt; <span class="number">3</span>) / NCPU : n) &lt; MIN_TRANSFER_STRIDE)</span><br><span class="line">	    stride = MIN_TRANSFER_STRIDE; <span class="comment">// subdivide range</span></span><br><span class="line">	<span class="keyword">if</span> (nextTab == <span class="literal">null</span>) &#123;            <span class="comment">// initiating</span></span><br><span class="line">	    <span class="keyword">try</span> &#123;</span><br><span class="line">	        <span class="comment">// 数组翻倍，为什么要多出一个赋值操作？是因为 new 操作可能异常？貌似也不影响</span></span><br><span class="line">	        <span class="meta">@SuppressWarnings(&quot;unchecked&quot;)</span></span><br><span class="line">	       Node&lt;K,V&gt;[] nt = (Node&lt;K,V&gt;[])<span class="keyword">new</span> <span class="title class_">Node</span>&lt;?,?&gt;[n &lt;&lt; <span class="number">1</span>];</span><br><span class="line">	       nextTab = nt;</span><br><span class="line">	   &#125; <span class="keyword">catch</span> (Throwable ex) &#123;      <span class="comment">// try to cope with OOME</span></span><br><span class="line">	       <span class="comment">// 失败，直接增加数组大小，退出</span></span><br><span class="line">	       sizeCtl = Integer.MAX_VALUE;</span><br><span class="line">	       <span class="keyword">return</span>;</span><br><span class="line">	   &#125;</span><br><span class="line">	   <span class="comment">// 因为本方法的外层调用都使用了 CAS，所以可以保证此赋值的正确性（多线程情况下）</span></span><br><span class="line">	   nextTable = nextTab;</span><br><span class="line">	   <span class="comment">// table 大小，最开始的转换范围是原数组大小</span></span><br><span class="line">	   transferIndex = n;</span><br><span class="line">	&#125;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>进入转换方法后，首先就是确定线程处理幅度，然后初始化 <code>nextTable</code> （如果需要的话），并初始化转换过程中需要用到的一些辅助属性，如：<code>transferIndex = n = table.length</code>。</p>
+<p>接下来，就是一个死循环（假象）。死循环内嵌死循环。第一个死循环使用到了局部参数 <code>i 和 bound</code>，实际上，在每个线程进入该方法后，都会获得自己这两个局部变量值，而它们的值变动则是在内部循环中开始赋值，一旦赋值成功，那么第一个死循环就变成了一个<code>有界的 for 循环</code></p>
+<p>优先看第二个内部循环， <code>advance</code> 变量控制了该循环。<code>advance</code> 变量主要表示：是否推进到下一个元素。它实际与 <code>i 和 bound </code>是有逻辑关系的，一旦 <code>i 和 bound </code>的关系不匹配，那么 <code>advance</code> 也就必须为 <code>false</code>，不再让线程进行推进，推进的操作是<code>（ --i ）</code>。也就是说，线程进入后，将有三个变量控制其运行，其中 <code>bound, i </code>是线程处理的数组边界，而 <code>advance</code> 则控制线程在这个边界中进行移动</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Node&lt;K,V&gt;[] tab, Node&lt;K,V&gt;[] nextTab)</span> &#123;</span><br><span class="line">  <span class="comment">// ... 省略部分代码</span></span><br><span class="line">	<span class="type">int</span> <span class="variable">nextn</span> <span class="operator">=</span> nextTab.length;</span><br><span class="line">	ForwardingNode&lt;K,V&gt; fwd = <span class="keyword">new</span> <span class="title class_">ForwardingNode</span>&lt;K,V&gt;(nextTab);</span><br><span class="line">	<span class="comment">// 是否推进到下一个元素，false 则表示还是处理当前元素</span></span><br><span class="line">	<span class="type">boolean</span> <span class="variable">advance</span> <span class="operator">=</span> <span class="literal">true</span>;</span><br><span class="line">	<span class="type">boolean</span> <span class="variable">finishing</span> <span class="operator">=</span> <span class="literal">false</span>; <span class="comment">// to ensure sweep before committing nextTab</span></span><br><span class="line">	<span class="keyword">for</span> (<span class="type">int</span> <span class="variable">i</span> <span class="operator">=</span> <span class="number">0</span>, bound = <span class="number">0</span>;;) &#123;</span><br><span class="line">	    <span class="comment">// f -&gt; findNode；fh -&gt; findNode hash</span></span><br><span class="line">	    Node&lt;K,V&gt; f; <span class="type">int</span> fh;</span><br><span class="line">	    <span class="comment">// 死循环主要是为了划分线程处理区间 ！还有控制元素推进</span></span><br><span class="line">	    <span class="keyword">while</span> (advance) &#123;</span><br><span class="line">	        <span class="type">int</span> nextIndex, nextBound;</span><br><span class="line">	        <span class="comment">// 死循环标志位，不断死循环执行处理，没有太多意义，纯粹依靠标志位</span></span><br><span class="line">	        <span class="comment">// 每一个线程进来，第一个判断都不成立</span></span><br><span class="line">	        <span class="comment">// 通过 --i 来控制线程处理区间的推进，</span></span><br><span class="line">	        <span class="comment">// 如果 --i &gt; bound 说明区间范围超过线程的处理范围，线程不再该范围内就行推进，标志位为false</span></span><br><span class="line">	        <span class="comment">// 每一次划分完，则 i 实际上是闭区间的尾部，而 bound 则为区间的首部，所以 --i 成功，进入区间下一个元素处理</span></span><br><span class="line">	        <span class="keyword">if</span> (--i &gt;= bound || finishing)</span><br><span class="line">	            advance = <span class="literal">false</span>;</span><br><span class="line">	        <span class="keyword">else</span> <span class="keyword">if</span> ((nextIndex = transferIndex) &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">	            <span class="comment">// 赋值 nextIndex</span></span><br><span class="line">	            <span class="comment">// 小于0 ：表已被划分完，不再作划分推进，跳出循环</span></span><br><span class="line">	            i = -<span class="number">1</span>;</span><br><span class="line">	            advance = <span class="literal">false</span>;</span><br><span class="line">	        &#125;</span><br><span class="line">	        <span class="keyword">else</span> <span class="keyword">if</span> (U.compareAndSetInt</span><br><span class="line">	                 (<span class="built_in">this</span>, TRANSFERINDEX, nextIndex,</span><br><span class="line">	                  nextBound = (nextIndex &gt; stride ?</span><br><span class="line">	                               nextIndex - stride : <span class="number">0</span>))) &#123;</span><br><span class="line">	            <span class="comment">// CAS 替换值，将 transferIndex 更新为 transferIndex - stride</span></span><br><span class="line">	            <span class="comment">// 控制此线程的处理区间为：bound ~ (nextIndex - 1)</span></span><br><span class="line">	            <span class="comment">// 假定初始表大小为 35，2个线程进入（其实跟线程数无关，跟 CPU 有关），NCPU = 2 ，则幅度控制下为 16</span></span><br><span class="line">	            <span class="comment">// 通过循环，划分下为：</span></span><br><span class="line">	            <span class="comment">// 19 ~ 34</span></span><br><span class="line">	            <span class="comment">// 3 ~ 18</span></span><br><span class="line">	            <span class="comment">// 0 ~ 2</span></span><br><span class="line">	            <span class="comment">// 也就说，transfer 的处理，（单线程）是从尾部到头部（当然总体情况下多线程则取决于线程的执行情况）</span></span><br><span class="line">	            bound = nextBound;</span><br><span class="line">	            i = nextIndex - <span class="number">1</span>;</span><br><span class="line">	            advance = <span class="literal">false</span>;</span><br><span class="line">	        &#125;</span><br><span class="line">	    &#125;</span><br><span class="line">      <span class="comment">// ... 省略部分代码</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到，内部死循环的主要作用，<strong>其实是为了划分分区（划分幅度为 <code>stride</code>）</strong>，也可以意识到，即使是单线程，其执行也是按分区执行，并且执行的分区顺序是从尾部到首部。通过 <code>CAS</code> 保证分区的划分的线程安全，失败则重新循环再次操作。</p>
+<p>划分完分区后，剩下的就是线程的处理过程。处理过程包括 2 部分，<strong>一部分是普通的元素处理，一部分是边界控制——退出出口</strong>。</p>
+<p>在每一个元素的处理过程中，线程都会先判断是否到达出口，是则退出？差不离，但退出包含两种情况，一种是普通的辅助线程的退出，它只擦自己的屁股，另外一种是整体线程的退出，它除了处理负责自己的退出出口，还要负责将重组后的结果 nextTable 重复赋值给 table，并为 sizeCtl 赋值为新数组大小的 0.75 倍的阈值</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Node&lt;K,V&gt;[] tab, Node&lt;K,V&gt;[] nextTab)</span> &#123;</span><br><span class="line">  <span class="comment">// ... 省略部分代码</span></span><br><span class="line">	<span class="comment">// 如果 i &lt; 0 || i &gt;= n || i + n &gt;= nextn ，都属于区间的边界判断</span></span><br><span class="line">	<span class="comment">// 超过边界则判断是否线程都已执行完毕，其实只有首尾区间的线程会触发到这个判断，</span></span><br><span class="line">	<span class="comment">// 其他的线程因为 stride &lt; i &lt; 2stride，所以不会触发此判断</span></span><br><span class="line">	<span class="keyword">if</span> (i &lt; <span class="number">0</span> || i &gt;= n || i + n &gt;= nextn) &#123;</span><br><span class="line">	    <span class="type">int</span> sc;</span><br><span class="line">	    <span class="comment">// 扩容出口</span></span><br><span class="line">	    <span class="comment">// 只有当 finishing 为 true 时，才真正将 nextTable 赋值给 旧 table 指针</span></span><br><span class="line">	    <span class="comment">// 而 finishing 为 true 的唯一条件，是所有的线程都执行完毕</span></span><br><span class="line">	    <span class="keyword">if</span> (finishing) &#123;</span><br><span class="line">	        nextTable = <span class="literal">null</span>;</span><br><span class="line">	        table = nextTab;</span><br><span class="line">	        <span class="comment">// 翻倍减去 0.25 ，为新数组大小的 0.75 倍的阈值</span></span><br><span class="line">	        sizeCtl = (n &lt;&lt; <span class="number">1</span>) - (n &gt;&gt;&gt; <span class="number">1</span>);</span><br><span class="line">	        <span class="keyword">return</span>;</span><br><span class="line">	    &#125;</span><br><span class="line">	    <span class="keyword">if</span> (U.compareAndSetInt(<span class="built_in">this</span>, SIZECTL, sc = sizeCtl, sc - <span class="number">1</span>)) &#123;</span><br><span class="line">	        <span class="keyword">if</span> ((sc - <span class="number">2</span>) != resizeStamp(n) &lt;&lt; RESIZE_STAMP_SHIFT)</span><br><span class="line">	            <span class="keyword">return</span>;</span><br><span class="line">	        <span class="comment">// 只有当所有的线程都执行完毕，才能保证 finishing 为 true</span></span><br><span class="line">	        finishing = advance = <span class="literal">true</span>;</span><br><span class="line">	        i = n; <span class="comment">// recheck before commit</span></span><br><span class="line">	    &#125;</span><br><span class="line">	&#125;     </span><br><span class="line">  <span class="comment">// ... 省略部分代码</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>说完了边界出口，剩下的就是普通的操作了，有以下判断：</p>
+<ul>
+<li>当线程转换时<strong>旧数组</strong>对应位置上为 <code>null</code>，则直接 <code>CAS</code> 替换为 <code>ForwardingNode</code>（其<code> hash = MOVED</code>），表示转移过了；此时，当外部有操作 <code>put</code> 刚好命中此位置时，将会进入辅助转换的过程，判断依据就是 <code>if (hash == MOVED)</code>。也就是说，在重组转换过程中，进行 <code>put</code> 操作，将进入辅助转换过程。</li>
+<li>如果 <code>hash 为 MOVED</code>，则表示该位置已被其他线程转移过，推进到下一个元素</li>
+</ul>
+<p>最后，进入与 <code>HashMap</code> 相同的链表重组和树结构重组的逻辑中，成功执行后，<code>advance = true</code>，继续推进处理元素<code>（--i）</code>。这里比 <code>HashMap</code> 多出一步，就是将旧数组对应位置上的标记为已处理。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title function_">transfer</span><span class="params">(Node&lt;K,V&gt;[] tab, Node&lt;K,V&gt;[] nextTab)</span> &#123;</span><br><span class="line">  <span class="comment">// ... 省略部分代码</span></span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> ((f = tabAt(tab, i)) == <span class="literal">null</span>)</span><br><span class="line">	    advance = casTabAt(tab, i, <span class="literal">null</span>, fwd);　　　<span class="comment">// 如果旧表该位置为null，则标记为已处理</span></span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> ((fh = f.hash) == MOVED)         <span class="comment">// 感觉不太可能遇到，毕竟线程单一负责自己的区域（？）</span></span><br><span class="line">	    advance = <span class="literal">true</span>; <span class="comment">// already processed</span></span><br><span class="line">	<span class="keyword">else</span> &#123;</span><br><span class="line">	    <span class="comment">// 进入转换</span></span><br><span class="line">	    <span class="keyword">synchronized</span> (f) &#123;</span><br><span class="line">	        <span class="keyword">if</span> (tabAt(tab, i) == f) &#123;</span><br><span class="line">	            Node&lt;K,V&gt; ln, hn;</span><br><span class="line">	            <span class="comment">// 普通链表的 hash 节点是正常的 hash 码，树节点的 hash 则默认小于 0</span></span><br><span class="line">	            <span class="comment">// 重哈希算法与 HashMap 相同，都是以 2的n次幂 对应的二进制刚好为 1，</span></span><br><span class="line">	            <span class="comment">// 直接移动高位部分元素</span></span><br><span class="line">	            <span class="keyword">if</span> (fh &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="comment">// ... 省略部分代码</span></span><br><span class="line">              &#125;</span><br><span class="line">	            <span class="keyword">else</span> <span class="keyword">if</span> (f <span class="keyword">instanceof</span> TreeBin) &#123;</span><br><span class="line">	              <span class="comment">// ... 省略部分代码 </span></span><br><span class="line">                setTabAt(nextTab, i, ln);</span><br><span class="line">	　　　　　      setTabAt(nextTab, i + n, hn);</span><br><span class="line">	　　　　　      <span class="comment">// 处理完成后，将旧数组的节点标记为已处理（旧数据将没有数据）</span></span><br><span class="line">	　　　　　      setTabAt(tab, i, fwd); </span><br><span class="line">                advance = <span class="literal">true</span>;</span><br><span class="line">	　　　　　　　&#125;</span><br><span class="line">          &#125;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>至此，整个 <code>ConcurrentHashMap</code> 的转换过程算完了</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html" title="ConcurrentHashMap的transfer阅读">https://tf2jaguar.dpdns.org/java-ConcurrentHashMap-transfer.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/java/" rel="tag"><i class="fa fa-tag"></i> java</a>
+              <a href="/tags/%E5%B9%B6%E5%8F%91%E5%AE%B9%E5%99%A8/" rel="tag"><i class="fa fa-tag"></i> 并发容器</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/understand-distributed-cache.html" rel="prev" title="300分钟吃透分布式缓存">
+                  <i class="fa fa-chevron-left"></i> 300分钟吃透分布式缓存
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/mysql-how-it-works.html" rel="next" title="mysql是怎么运行的-笔记">
+                  mysql是怎么运行的-笔记 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

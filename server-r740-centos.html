@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="服务器装系统注意点 硬件相关 做RAID0 建议服务器系统盘符小于2T   软件相关 强制使用GPT 分割表">
+<meta property="og:type" content="article">
+<meta property="og:title" content="R740服务器装Centos7-6步骤图">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/server-r740-centos.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="服务器装系统注意点 硬件相关 做RAID0 建议服务器系统盘符小于2T   软件相关 强制使用GPT 分割表">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/28/m7koqI.jpg">
+<meta property="og:image" content="https://s2.ax1x.com/2019/07/26/euK301.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewR6x0.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewRgMV.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewR0aQ.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewRy2q.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewRB5j.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewRrPs.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewRsGn.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewvKUA.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewvM4I.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewvuEd.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewvmHH.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewvlCt.png">
+<meta property="og:image" content="https://s2.ax1x.com/2019/08/02/ewveDe.png">
+<meta property="article:published_time" content="2019-08-04T12:32:49.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.481Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="linux">
+<meta property="article:tag" content="服务器">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://s2.ax1x.com/2019/08/28/m7koqI.jpg">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/server-r740-centos.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/server-r740-centos.html","path":"server-r740-centos.html","title":"R740服务器装Centos7-6步骤图"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>R740服务器装Centos7-6步骤图 | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%A3%85%E7%B3%BB%E7%BB%9F%E6%B3%A8%E6%84%8F%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">服务器装系统注意点</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3"><span class="nav-number">2.</span> <span class="nav-text">硬件相关</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%81%9ARAID0"><span class="nav-number">2.1.</span> <span class="nav-text">做RAID0</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BB%BA%E8%AE%AE%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%B3%BB%E7%BB%9F%E7%9B%98%E7%AC%A6%E5%B0%8F%E4%BA%8E2T"><span class="nav-number">2.2.</span> <span class="nav-text">建议服务器系统盘符小于2T</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E7%9B%B8%E5%85%B3"><span class="nav-number">3.</span> <span class="nav-text">软件相关</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BC%BA%E5%88%B6%E4%BD%BF%E7%94%A8GPT-%E5%88%86%E5%89%B2%E8%A1%A8"><span class="nav-number">3.1.</span> <span class="nav-text">强制使用GPT 分割表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%86%E5%8C%BA%EF%BC%9F-%E5%A4%A7%E5%B0%8F%EF%BC%9F-%E7%B1%BB%E5%9E%8B%EF%BC%9F"><span class="nav-number">3.2.</span> <span class="nav-text">分区？ 大小？ 类型？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#DevelopMent-Tools"><span class="nav-number">3.3.</span> <span class="nav-text">DevelopMent Tools</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CentOS-7-%E4%BD%BF%E7%94%A8yum%E5%AE%89%E8%A3%85MariaDB"><span class="nav-number">3.4.</span> <span class="nav-text">CentOS 7 使用yum安装MariaDB</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8%E7%9B%98%E6%8C%82%E8%BD%BD"><span class="nav-number">3.5.</span> <span class="nav-text">启动盘挂载</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Dell-R740%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E8%A3%85-Centos-7-6-%E6%AD%A5%E9%AA%A4"><span class="nav-number">4.</span> <span class="nav-text">Dell R740服务器安装 Centos 7.6 步骤</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/server-r740-centos.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="R740服务器装Centos7-6步骤图 | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          R740服务器装Centos7-6步骤图
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2019-08-04 20:32:49" itemprop="dateCreated datePublished" datetime="2019-08-04T20:32:49+08:00">2019-08-04</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/server-r740-centos.html" class="post-meta-item leancloud_visitors" data-flag-title="R740服务器装Centos7-6步骤图" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>1.9k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>2 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <ul>
+<li><a href="#%E6%9C%8D%E5%8A%A1%E5%99%A8%E8%A3%85%E7%B3%BB%E7%BB%9F%E6%B3%A8%E6%84%8F%E7%82%B9">服务器装系统注意点</a></li>
+<li><a href="#%E7%A1%AC%E4%BB%B6%E7%9B%B8%E5%85%B3">硬件相关</a><ul>
+<li><a href="#%E5%81%9Araid0">做RAID0</a></li>
+<li><a href="#%E5%BB%BA%E8%AE%AE%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%B3%BB%E7%BB%9F%E7%9B%98%E7%AC%A6%E5%B0%8F%E4%BA%8E2t">建议服务器系统盘符小于2T</a></li>
+</ul>
+</li>
+<li><a href="#%E8%BD%AF%E4%BB%B6%E7%9B%B8%E5%85%B3">软件相关</a><ul>
+<li><a href="#%E5%BC%BA%E5%88%B6%E4%BD%BF%E7%94%A8gpt-%E5%88%86%E5%89%B2%E8%A1%A8">强制使用GPT 分割表</a><span id="more"></span></li>
+<li><a href="#%E5%88%86%E5%8C%BA-%E5%A4%A7%E5%B0%8F-%E7%B1%BB%E5%9E%8B">分区？ 大小？ 类型？</a></li>
+<li><a href="#development-tools">DevelopMent Tools</a></li>
+<li><a href="#centos-7-%E4%BD%BF%E7%94%A8yum%E5%AE%89%E8%A3%85mariadb">CentOS 7 使用yum安装MariaDB</a></li>
+<li><a href="#%E5%90%AF%E5%8A%A8%E7%9B%98%E6%8C%82%E8%BD%BD">启动盘挂载</a></li>
+</ul>
+</li>
+<li><a href="#dell-r740%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%89%E8%A3%85-centos-76-%E6%AD%A5%E9%AA%A4">Dell R740服务器安装 Centos 7.6 步骤</a></li>
+</ul>
+<h1 id="服务器装系统注意点"><a href="#服务器装系统注意点" class="headerlink" title="服务器装系统注意点"></a>服务器装系统注意点</h1><h1 id="硬件相关"><a href="#硬件相关" class="headerlink" title="硬件相关"></a>硬件相关</h1><h2 id="做RAID0"><a href="#做RAID0" class="headerlink" title="做RAID0"></a>做RAID0</h2><p>配置磁盘阵列等（需两块以上硬盘） </p>
+<h2 id="建议服务器系统盘符小于2T"><a href="#建议服务器系统盘符小于2T" class="headerlink" title="建议服务器系统盘符小于2T"></a>建议服务器系统盘符小于2T</h2><p>使用小于2T盘符来装系统，装好系统后，<strong>其他磁盘卡槽可以随意挂载硬盘。</strong> 系统盘符大于4T服务器会有很多意外情况。</p>
+<hr>
+<h1 id="软件相关"><a href="#软件相关" class="headerlink" title="软件相关"></a>软件相关</h1><h2 id="强制使用GPT-分割表"><a href="#强制使用GPT-分割表" class="headerlink" title="强制使用GPT 分割表"></a>强制使用GPT 分割表</h2><p>系统盘容量小于2TB的话，系统预设会使用MBR模式来安装，系统盘大于2T，需要GPT分割表。</p>
+<p>在installcentos7，之前，选择”tab”键，输入<strong>inst.gpt</strong> 在启动时。同时，可能出现找不到安装U盘的盘符，可以删除LABEL&#x3D;后的名称 让其等于你的启动盘盘符。(注意，各个项目要有空格，最后一个是游标本身而非底线)</p>
+<p><img data-src="https://s2.ax1x.com/2019/08/28/m7koqI.jpg" alt="m7koqI.jpg"></p>
+<h2 id="分区？-大小？-类型？"><a href="#分区？-大小？-类型？" class="headerlink" title="分区？ 大小？ 类型？"></a>分区？ 大小？ 类型？</h2><ol>
+<li><p>ext3、ext4?<br>磁盘需要给系统50G~100G  ，类型一般选ext4或xfs都行</p>
+</li>
+<li><p>若手动分区失败，采用自动分区。<br>自动分区没有data目录，可以手动更改，卸载&#x2F;home替换为&#x2F;data。<br><a target="_blank" rel="noopener" href="https://blog.51cto.com/13485944/2085270">参考链接</a></p>
+</li>
+</ol>
+<h2 id="DevelopMent-Tools"><a href="#DevelopMent-Tools" class="headerlink" title="DevelopMent Tools"></a>DevelopMent Tools</h2><p>安装系统时记得选择安装软件 ‘DevelopMent Tools’</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 当然错过的话可以使用如下命令</span><br><span class="line">yum groupinstall &quot;Development Libraries&quot;</span><br><span class="line">yum groupinstall &quot;Development Tools&quot;</span><br><span class="line">yum install ncurses-devel zlib-devel texinfo gtk+-devel gtk2-devel qt-devel tcl-devel tk-devel libX11-devel kernel-headers kernel-devel </span><br></pre></td></tr></table></figure>
+
+<h2 id="CentOS-7-使用yum安装MariaDB"><a href="#CentOS-7-使用yum安装MariaDB" class="headerlink" title="CentOS 7 使用yum安装MariaDB"></a>CentOS 7 使用yum安装MariaDB</h2><p><a target="_blank" rel="noopener" href="http://note.youdao.com/noteshare?id=a82507decec2b85e58ae6dd2bc4d2329&sub=E2A69357B24949AAA3CAB47D34C2497A">在线安装MariaDB参考链接</a></p>
+<h2 id="启动盘挂载"><a href="#启动盘挂载" class="headerlink" title="启动盘挂载"></a>启动盘挂载</h2><p>&#x2F;etc&#x2F;yml.repo<br>将上面的文件都备份，<br>然后创建个repo文件，其中file:&#x2F;&#x2F;&#x2F;mnt是挂载的启动盘  </p>
+<p><img data-src="https://s2.ax1x.com/2019/07/26/euK301.png" alt="euK301.png"></p>
+<h1 id="Dell-R740服务器安装-Centos-7-6-步骤"><a href="#Dell-R740服务器安装-Centos-7-6-步骤" class="headerlink" title="Dell R740服务器安装 Centos 7.6 步骤"></a>Dell R740服务器安装 Centos 7.6 步骤</h1><p>其实服务器安装系统和虚拟机安装系统没什么太多的不同，注意我前边的文章《服务器装系统注意事项》中说的内容就好了。</p>
+<ol>
+<li>开机后按 <strong>F11</strong> 进入BootManager，选择 <strong>One-shot UEFI Boot Menu</strong></li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewR6x0.png" alt="ewR6x0.png"></p>
+<ol start="2">
+<li>选择带有USB的选项，从U盘启动</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewRgMV.png" alt="ewRgMV.png"></p>
+<ol start="3">
+<li>进入安装界面，光标移到第一个<strong>Install Centos 7</strong> 然后有两种做法</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewR0aQ.png" alt="ewR0aQ.png"></p>
+<p>4.1 按Tab键 </p>
+<p>按下TAB后，你会看到</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">vmlinuz initrd=initrd.img inst.stage2=hd:LABEL=CentOS\x207\x20x86_64 rd.live.check quiet</span><br></pre></td></tr></table></figure>
+<p>把LABEL&#x3D;CentOS\x207\x20x86_64修改一下改成你修改后的卷标。然后 按回车，稍等一会进入第 5 步。</p>
+<p>4.2 第3步完成后 <strong>按e</strong> 将<strong>hd:LABEL&#x3D;CentOS\x207\x20x86_64 quiet</strong> 删除一部分，改成<strong>hd:LABEL&#x3D;CentOS quiet inst.gpt</strong> 按Ctrl+x启动。LABEL&#x3D; 后为你的启动盘的名称。inst.gpt为你需要手动分区 GPT分割表。</p>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewRy2q.png" alt="ewRy2q.png"></p>
+<ol start="5">
+<li>选择语言，默认即可，点击Continue</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewRB5j.png" alt="ewRB5j.png"></p>
+<ol start="6">
+<li>下边可能存在一些感叹号，暂时不用管。选择<strong>DATE &amp; TIME</strong></li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewRrPs.png" alt="ewRrPs.png"></p>
+<ol start="7">
+<li>选择 亚洲 <strong>Asia</strong>，上海 <strong>Shanghai</strong>，修改一下下边的小时，然后点击Done</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewRsGn.png" alt="ewRsGn.png"></p>
+<ol start="8">
+<li>选择<strong>SOFTWARE SELECTION</strong> 选择安装的软件，勾选 <strong>Development Tools</strong> 点击Done</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewvKUA.png" alt="ewvKUA.png"></p>
+<ol start="9">
+<li>等一小段时间，<strong>SOFTWARE</strong> 中的两个图标中的感叹号将消失，然后选择<strong>INSTALLATION DESTINATION</strong> 选择安装设备，下边分区选择自动分区<strong>Automatically configure partitioning</strong>，需要特殊分区的待系统创建好后，手动更改，然后点击Done</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewvM4I.png" alt="ewvM4I.png"></p>
+<ol start="10">
+<li>过一小段时间，感叹号将消失。此时已经开始安装，点击<strong>ROOT PASSWORD</strong> 进行更改Root用户密码</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewvuEd.png" alt="ewvuEd.png"></p>
+<ol start="11">
+<li>修改Root用户密码，完成后点击两次Done</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewvmHH.png" alt="ewvmHH.png"></p>
+<ol start="12">
+<li>此时可以点击 <strong>USER CREATION</strong> 可以创建一个用户同时设置其密码和权限</li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewvlCt.png" alt="ewvlCt.png"></p>
+<ol start="13">
+<li>将该用户设为管理员级别 勾选<strong>Make this user administrator</strong></li>
+</ol>
+<p><img data-src="https://s2.ax1x.com/2019/08/02/ewveDe.png" alt="ewveDe.png"></p>
+<ol start="14">
+<li>等待安装完毕，点击右下角Reboot。待重启完成后，输入root和第11步设置的root密码进行登陆。</li>
+<li>完成安装，拔掉U盘。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/server-r740-centos.html" title="R740服务器装Centos7-6步骤图">https://tf2jaguar.dpdns.org/server-r740-centos.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/linux/" rel="tag"><i class="fa fa-tag"></i> linux</a>
+              <a href="/tags/%E6%9C%8D%E5%8A%A1%E5%99%A8/" rel="tag"><i class="fa fa-tag"></i> 服务器</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/server-ultraiso-centos.html" rel="prev" title="UltraISO制作启动盘安装CentOS7">
+                  <i class="fa fa-chevron-left"></i> UltraISO制作启动盘安装CentOS7
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/ceph-problems.html" rel="next" title="ceph踩坑指南">
+                  ceph踩坑指南 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>

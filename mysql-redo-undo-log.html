@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 6.3.0">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="_5qfqzvIa4Nw5HoY6jzgU0dsFfP1EBBnBaTbjdKUBbo">
+  <meta name="msvalidate.01" content="80248B8B0E78C583E1339DEA16E8DE8D">
+  <meta name="baidu-site-verification" content="codeva-SbBnzjXFwD">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.loli.net/css?family=Lato:300,300italic,400,400italic,700,700italic%7CRoboto+Slab:300,300italic,400,400italic,700,700italic%7CPT+Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.1.1/css/all.min.css" integrity="sha256-DfWjNxDkM94fVBWx1H5BMMp0Zq7luBlV8QRcSES7s+0=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/animate.css@3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"tf2jaguar.dpdns.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.11.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12},"copycode":true,"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":true,"pangu":false,"comments":{"style":"tabs","active":"twikoo","storage":true,"lazyload":false,"nav":null,"activeClass":"twikoo"},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"prism":false,"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"trigger":"auto","top_n_per_article":6,"unescape":false,"preload":false}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="redo日志 redo 日志格式 redo 日志类型 Mini-Transaction 以组的形式写入redo日志   redo日志的写入过程">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql的redo和undo-log">
+<meta property="og:url" content="https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html">
+<meta property="og:site_name" content="被窝思考家">
+<meta property="og:description" content="redo日志 redo 日志格式 redo 日志类型 Mini-Transaction 以组的形式写入redo日志   redo日志的写入过程">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220309190612213.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310110823090.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310110910051.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310114517932.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310114543679.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310114949619.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310115137429.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310115406269.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220310115436620.png">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/9a8cda0234c34fdda9eb5576d4b5a528~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/5b3f8a7df93146eeb575b651be1ad41d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/e7a2196602a3405dbdf1ffc563e58036~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/445a7cb22b584674a2c8bb06aa1f9b19~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/18282222d19b4350a48de69efd8aefd7~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/d1374310f72243c7bae67dad8dab976a~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/8e8f914ca4cc4ec89ebf7ef1a6c49a80~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="og:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/c02ced87e3ab4699a7349d54b54c3103~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp">
+<meta property="article:published_time" content="2022-03-09T11:04:21.000Z">
+<meta property="article:modified_time" content="2025-05-24T03:36:52.474Z">
+<meta property="article:author" content="Big Jelly">
+<meta property="article:tag" content="mysql">
+<meta property="article:tag" content="日志">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://tf2jaguar.dpdns.org/images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/image-20220309190612213.png">
+
+
+<link rel="canonical" href="https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html","path":"mysql-redo-undo-log.html","title":"mysql的redo和undo-log"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>mysql的redo和undo-log | 被窝思考家</title>
+  
+
+  <script src="/js/third-party/analytics/baidu-analytics.js"></script>
+  <script async src="https://hm.baidu.com/hm.js?3a4fd23bff4c7be9bb29094c82eeaf21"></script>
+
+
+
+
+
+  <script async src="/js/cursor-effect-fireworks.js"></script>
+
+
+ 
+
+<script>
+  var OriginTitile = document.title;
+  var titleTime;
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      document.title = "(つェ⊂)我藏好了哦~" + OriginTitile;
+      clearTimeout(titleTime);
+    } else {
+      document.title = "(*´∇｀*) 被你发现啦~" + OriginTitile;
+      titleTime = setTimeout(function() {
+        document.title = OriginTitile;
+      }, 2000);
+    }
+  });
+</script>
+
+
+ 
+
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126" crossorigin="anonymous"></script>
+
+
+ 
+<meta name="360-site-verification" content="fdee67281391edde813b617b96f9d658" />
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+<link rel="alternate" href="/atom.xml" title="被窝思考家" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">被窝思考家</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">在哪思考不是思考</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档<span class="badge">97</span></a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类<span class="badge">20</span></a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签<span class="badge">90</span></a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup"><div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off" maxlength="80"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close" role="button">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div class="search-result-container no-result">
+  <div class="search-result-icon">
+    <i class="fa fa-spinner fa-pulse fa-5x"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+        
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#redo%E6%97%A5%E5%BF%97"><span class="nav-number">1.</span> <span class="nav-text">redo日志</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#redo-%E6%97%A5%E5%BF%97%E6%A0%BC%E5%BC%8F"><span class="nav-number">1.1.</span> <span class="nav-text">redo 日志格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redo-%E6%97%A5%E5%BF%97%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.2.</span> <span class="nav-text">redo 日志类型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Mini-Transaction"><span class="nav-number">1.3.</span> <span class="nav-text">Mini-Transaction</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%BB%A5%E7%BB%84%E7%9A%84%E5%BD%A2%E5%BC%8F%E5%86%99%E5%85%A5redo%E6%97%A5%E5%BF%97"><span class="nav-number">1.3.1.</span> <span class="nav-text">以组的形式写入redo日志</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redo%E6%97%A5%E5%BF%97%E7%9A%84%E5%86%99%E5%85%A5%E8%BF%87%E7%A8%8B"><span class="nav-number">1.4.</span> <span class="nav-text">redo日志的写入过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#redo-log-block"><span class="nav-number">1.4.1.</span> <span class="nav-text">redo log block</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%80%E3%80%81Undo-log%E6%92%A4%E9%94%80%E6%97%A5%E5%BF%97"><span class="nav-number">2.</span> <span class="nav-text">一、Undo-log撤销日志</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1%E3%80%81%E5%AF%B9%E4%BA%8E%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%BB%9A%E5%8E%9F%E7%90%86%E7%9A%84%E7%BA%A0%E6%AD%A3"><span class="nav-number">2.1.</span> <span class="nav-text">1.1、对于事务回滚原理的纠正</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2%E3%80%81%E5%9F%BA%E4%BA%8EUndo%E7%89%88%E6%9C%AC%E9%93%BE%E5%AE%9E%E7%8E%B0MVCC"><span class="nav-number">2.2.</span> <span class="nav-text">1.2、基于Undo版本链实现MVCC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3%E3%80%81Undo-log%E7%9A%84%E5%86%85%E5%AD%98%E7%BC%93%E5%86%B2%E5%8C%BA"><span class="nav-number">2.3.</span> <span class="nav-text">1.3、Undo-log的内存缓冲区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4%E3%80%81Undo-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0"><span class="nav-number">2.4.</span> <span class="nav-text">1.4、Undo-log相关的参数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E3%80%81Redo-log%E9%87%8D%E5%81%9A%E6%97%A5%E5%BF%97"><span class="nav-number">3.</span> <span class="nav-text">二、Redo-log重做日志</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1%E3%80%81%E4%B8%BA%E4%BD%95%E9%9C%80%E8%A6%81Redo-log%E6%97%A5%E5%BF%97%EF%BC%9F"><span class="nav-number">3.1.</span> <span class="nav-text">2.1、为何需要Redo-log日志？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2%E3%80%81Redo-log%E7%9A%84%E5%88%B7%E7%9B%98%E7%AD%96%E7%95%A5"><span class="nav-number">3.2.</span> <span class="nav-text">2.2、Redo-log的刷盘策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3%E3%80%81Redo-log%E4%B8%AD%E4%B8%BA%E4%BD%95%E2%80%9C%E5%A4%9A%E6%AD%A4%E4%B8%80%E4%B8%BE%E2%80%9D%EF%BC%9F"><span class="nav-number">3.3.</span> <span class="nav-text">2.3、Redo-log中为何“多此一举”？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4%E3%80%81Redo-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0"><span class="nav-number">3.4.</span> <span class="nav-text">2.4、Redo-log相关的参数</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%89%E3%80%81Bin-log%E5%8F%98%E6%9B%B4%E6%97%A5%E5%BF%97"><span class="nav-number">4.</span> <span class="nav-text">三、Bin-log变更日志</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1%E3%80%81bin-log%E7%9A%84%E7%BC%93%E5%86%B2%E5%8C%BA"><span class="nav-number">4.1.</span> <span class="nav-text">3.1、bin-log的缓冲区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2%E3%80%81Bin-log%E6%9C%AC%E5%9C%B0%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6%E7%9A%84%E6%A0%BC%E5%BC%8F"><span class="nav-number">4.2.</span> <span class="nav-text">3.2、Bin-log本地日志文件的格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E4%BA%86Redo-log%E8%BF%98%E9%9C%80%E8%A6%81Bin-log%EF%BC%9F"><span class="nav-number">4.3.</span> <span class="nav-text">3.2、为什么有了Redo-log还需要Bin-log？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3%E3%80%81Redo-log%E3%80%81Bin-log%E4%B8%A4%E8%80%85%E7%9A%84%E5%8C%BA%E5%88%AB"><span class="nav-number">4.4.</span> <span class="nav-text">3.3、Redo-log、Bin-log两者的区别</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-4%E3%80%81%E4%B8%8D%E5%B0%8F%E5%BF%83%E5%88%A0%E5%BA%93%E5%90%8E%E5%BA%94%E8%AF%A5%E8%B7%91%E8%B7%AF%E5%90%97%EF%BC%9F"><span class="nav-number">4.5.</span> <span class="nav-text">3.4、不小心删库后应该跑路吗？</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-5%E3%80%81bin-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0"><span class="nav-number">4.6.</span> <span class="nav-text">3.5、bin-log相关的参数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-6%E3%80%81Redo-log%E7%9A%84%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4"><span class="nav-number">4.7.</span> <span class="nav-text">3.6、Redo-log的两阶段提交</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%9B%9B%E3%80%81Error-log%E9%94%99%E8%AF%AF%E6%97%A5%E5%BF%97"><span class="nav-number">5.</span> <span class="nav-text">四、Error-log错误日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%94%E3%80%81Slow-log%E6%85%A2%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97"><span class="nav-number">6.</span> <span class="nav-text">五、Slow-log慢查询日志</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#General-log%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97"><span class="nav-number">6.1.</span> <span class="nav-text">General-log查询日志</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%AD%E3%80%81Relay-log%E4%B8%AD%E7%BB%A7%E6%97%A5%E5%BF%97"><span class="nav-number">7.</span> <span class="nav-text">六、Relay-log中继日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%83%E3%80%81%E6%97%A5%E5%BF%97%E7%AF%87%E6%80%BB%E7%BB%93"><span class="nav-number">8.</span> <span class="nav-text">七、日志篇总结</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author site-overview-item animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Big Jelly"
+      src="/images/avatar.gif">
+  <p class="site-author-name" itemprop="name">Big Jelly</p>
+  <div class="site-description" itemprop="description">Nothing is easier than to deceive oneself</div>
+</div>
+<div class="site-state-wrap site-overview-item animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">97</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+          <a href="/categories/">
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+          <a href="/tags/">
+        <span class="site-state-item-count">90</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author site-overview-item animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/tf2jaguar" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;tf2jaguar" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/guodong54" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;guodong54" rel="noopener" target="_blank"><i class="fa fa-c fa-fw"></i>CSDN</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:jelly_54@163.com" title="E-Mail → mailto:jelly_54@163.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="/atom.xml" title="RSS → &#x2F;atom.xml"><i class="fa fa-rss fa-fw"></i>RSS</a>
+      </span>
+  </div>
+
+
+  <div class="links-of-blogroll site-overview-item animated">
+    <div class="links-of-blogroll-title"><i class="fa fa-globe fa-fw"></i>
+      Links
+    </div>
+    <ul class="links-of-blogroll-list">
+        <li class="links-of-blogroll-item">
+          <a href="https://leetcode.com/" title="https:&#x2F;&#x2F;leetcode.com&#x2F;" rel="noopener" target="_blank">LeetCode</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://www.dooccn.com/" title="http:&#x2F;&#x2F;www.dooccn.com&#x2F;" rel="noopener" target="_blank">在线编辑代码</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="http://24mail.chacuo.net/?utm_campaign=haruki&utm_content=note&utm_medium=reader_share&utm_source=qq" title="http:&#x2F;&#x2F;24mail.chacuo.net&#x2F;?utm_campaign&#x3D;haruki&amp;utm_content&#x3D;note&amp;utm_medium&#x3D;reader_share&amp;utm_source&#x3D;qq" rel="noopener" target="_blank">24Mail</a>
+        </li>
+        <li class="links-of-blogroll-item">
+          <a href="https://juejin.cn/" title="https:&#x2F;&#x2F;juejin.cn&#x2F;" rel="noopener" target="_blank">掘金酱</a>
+        </li>
+    </ul>
+  </div>
+
+
+  <div style="">
+    <canvas id="canvas" style="width:60%;">当前浏览器不支持canvas，请更换浏览器后再试</canvas>
+  </div>
+  <script async src="/js/canvas-clock.js"></script>
+
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="7563237003"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="sidebar-dimmer"></div>
+
+
+    </header>
+
+    
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/tf2jaguar" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Big Jelly">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="被窝思考家">
+      <meta itemprop="description" content="Nothing is easier than to deceive oneself">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="mysql的redo和undo-log | 被窝思考家">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql的redo和undo-log
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2022-03-09 19:04:21" itemprop="dateCreated datePublished" datetime="2022-03-09T19:04:21+08:00">2022-03-09</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">更新于</span>
+      <time title="修改时间：2025-05-24 11:36:52" itemprop="dateModified" datetime="2025-05-24T11:36:52+08:00">2025-05-24</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/mysql%E6%95%B0%E6%8D%AE%E5%BA%93/" itemprop="url" rel="index"><span itemprop="name">mysql数据库</span></a>
+        </span>
+    </span>
+
+  
+    <span id="/mysql-redo-undo-log.html" class="post-meta-item leancloud_visitors" data-flag-title="mysql的redo和undo-log" title="阅读次数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-eye"></i>
+      </span>
+      <span class="post-meta-item-text">阅读次数：</span>
+      <span class="leancloud-visitors-count"></span>
+    </span>
+    <span class="post-meta-break"></span>
+    <span class="post-meta-item" title="本文字数">
+      <span class="post-meta-item-icon">
+        <i class="far fa-file-word"></i>
+      </span>
+      <span class="post-meta-item-text">本文字数：</span>
+      <span>18k</span>
+    </span>
+    <span class="post-meta-item" title="阅读时长">
+      <span class="post-meta-item-icon">
+        <i class="far fa-clock"></i>
+      </span>
+      <span class="post-meta-item-text">阅读时长 &asymp;</span>
+      <span>16 分钟</span>
+    </span>
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+        <ul>
+<li><a href="#redo%E6%97%A5%E5%BF%97">redo日志</a><ul>
+<li><a href="#redo-%E6%97%A5%E5%BF%97%E6%A0%BC%E5%BC%8F">redo 日志格式</a></li>
+<li><a href="#redo-%E6%97%A5%E5%BF%97%E7%B1%BB%E5%9E%8B">redo 日志类型</a></li>
+<li><a href="#mini-transaction">Mini-Transaction</a><ul>
+<li><a href="#%E4%BB%A5%E7%BB%84%E7%9A%84%E5%BD%A2%E5%BC%8F%E5%86%99%E5%85%A5redo%E6%97%A5%E5%BF%97">以组的形式写入<strong>redo</strong>日志</a></li>
+</ul>
+</li>
+<li><a href="#redo%E6%97%A5%E5%BF%97%E7%9A%84%E5%86%99%E5%85%A5%E8%BF%87%E7%A8%8B"><strong>redo</strong>日志的写入过程</a><span id="more"></span><ul>
+<li><a href="#redo-log-block">redo log block</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#%E4%B8%80undo-log%E6%92%A4%E9%94%80%E6%97%A5%E5%BF%97">一、Undo-log撤销日志</a><ul>
+<li><a href="#11%E5%AF%B9%E4%BA%8E%E4%BA%8B%E5%8A%A1%E5%9B%9E%E6%BB%9A%E5%8E%9F%E7%90%86%E7%9A%84%E7%BA%A0%E6%AD%A3">1.1、对于事务回滚原理的纠正</a></li>
+<li><a href="#12%E5%9F%BA%E4%BA%8Eundo%E7%89%88%E6%9C%AC%E9%93%BE%E5%AE%9E%E7%8E%B0mvcc">1.2、基于Undo版本链实现MVCC</a></li>
+<li><a href="#13undo-log%E7%9A%84%E5%86%85%E5%AD%98%E7%BC%93%E5%86%B2%E5%8C%BA">1.3、Undo-log的内存缓冲区</a></li>
+<li><a href="#14undo-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0">1.4、Undo-log相关的参数</a></li>
+</ul>
+</li>
+<li><a href="#%E4%BA%8Credo-log%E9%87%8D%E5%81%9A%E6%97%A5%E5%BF%97">二、Redo-log重做日志</a><ul>
+<li><a href="#21%E4%B8%BA%E4%BD%95%E9%9C%80%E8%A6%81redo-log%E6%97%A5%E5%BF%97">2.1、为何需要Redo-log日志？</a></li>
+<li><a href="#22redo-log%E7%9A%84%E5%88%B7%E7%9B%98%E7%AD%96%E7%95%A5">2.2、Redo-log的刷盘策略</a></li>
+<li><a href="#23redo-log%E4%B8%AD%E4%B8%BA%E4%BD%95%E5%A4%9A%E6%AD%A4%E4%B8%80%E4%B8%BE">2.3、Redo-log中为何“多此一举”？</a></li>
+<li><a href="#24redo-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0">2.4、Redo-log相关的参数</a></li>
+</ul>
+</li>
+<li><a href="#%E4%B8%89bin-log%E5%8F%98%E6%9B%B4%E6%97%A5%E5%BF%97">三、Bin-log变更日志</a><ul>
+<li><a href="#31bin-log%E7%9A%84%E7%BC%93%E5%86%B2%E5%8C%BA">3.1、bin-log的缓冲区</a></li>
+<li><a href="#32bin-log%E6%9C%AC%E5%9C%B0%E6%97%A5%E5%BF%97%E6%96%87%E4%BB%B6%E7%9A%84%E6%A0%BC%E5%BC%8F">3.2、Bin-log本地日志文件的格式</a></li>
+<li><a href="#32%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E4%BA%86redo-log%E8%BF%98%E9%9C%80%E8%A6%81bin-log">3.2、为什么有了Redo-log还需要Bin-log？</a></li>
+<li><a href="#33redo-logbin-log%E4%B8%A4%E8%80%85%E7%9A%84%E5%8C%BA%E5%88%AB">3.3、Redo-log、Bin-log两者的区别</a></li>
+<li><a href="#34%E4%B8%8D%E5%B0%8F%E5%BF%83%E5%88%A0%E5%BA%93%E5%90%8E%E5%BA%94%E8%AF%A5%E8%B7%91%E8%B7%AF%E5%90%97">3.4、不小心删库后应该跑路吗？</a></li>
+<li><a href="#35bin-log%E7%9B%B8%E5%85%B3%E7%9A%84%E5%8F%82%E6%95%B0">3.5、bin-log相关的参数</a></li>
+<li><a href="#36redo-log%E7%9A%84%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4">3.6、Redo-log的两阶段提交</a></li>
+</ul>
+</li>
+<li><a href="#%E5%9B%9Berror-log%E9%94%99%E8%AF%AF%E6%97%A5%E5%BF%97">四、Error-log错误日志</a></li>
+<li><a href="#%E4%BA%94slow-log%E6%85%A2%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97">五、Slow-log慢查询日志</a><ul>
+<li><a href="#general-log%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97">General-log查询日志</a></li>
+</ul>
+</li>
+<li><a href="#%E5%85%ADrelay-log%E4%B8%AD%E7%BB%A7%E6%97%A5%E5%BF%97">六、Relay-log中继日志</a></li>
+<li><a href="#%E4%B8%83%E6%97%A5%E5%BF%97%E7%AF%87%E6%80%BB%E7%BB%93">七、日志篇总结</a></li>
+</ul>
+<h2 id="redo日志"><a href="#redo日志" class="headerlink" title="redo日志"></a>redo日志</h2><h3 id="redo-日志格式"><a href="#redo-日志格式" class="headerlink" title="redo 日志格式"></a>redo 日志格式</h3><p> redo 日志本质上只是记录了一下事务对数据库做了哪些修改</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220309190612213.png" alt="image-20220309190612213" style="zoom:25%;" />
+
+<p>各个部分的详细释义如下:</p>
+<ul>
+<li><p>type :该条 redo 日志的类型。在 MySQL 5.7.21 这个版本中，设计 InnoDB 的大叔一共为 redo 日志设计了53种不同的类型，稍后会详细介 绍不同类型的 redo 日志。</p>
+</li>
+<li><p>space ID :表空间ID。</p>
+</li>
+<li><p>page number :页号。</p>
+</li>
+<li><p>data :该条 redo 日志的具体内容。</p>
+</li>
+</ul>
+<h3 id="redo-日志类型"><a href="#redo-日志类型" class="headerlink" title="redo 日志类型"></a>redo 日志类型</h3><ul>
+<li>MLOG_1BYTE ( type 字段对应的十进制数字为 1 ):表示在页面的某个偏移量处写入1个字节的 redo 日志 类型。</li>
+<li>MLOG_2BYTE ( type 字段对应的十进制数字为 2 ):表示在页面的某个偏移量处写入2个字节的 redo 日志 类型。</li>
+<li>MLOG_4BYTE ( type 字段对应的十进制数字为 4 ):表示在页面的某个偏移量处写入4个字节的 redo 日志 类型。</li>
+<li>MLOG_8BYTE ( type 字段对应的十进制数字为 8 ):表示在页面的某个偏移量处写入8个字节的 redo 日志 类型。</li>
+<li>MLOG_WRITE_STRING ( type 字段对应的十进制数字为 30 ):表示在页面的某个偏移量处写入一串数据。</li>
+</ul>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310110823090.png" alt="image-20220310110823090" style="zoom:25%;" />
+
+<p>其余 MLOG_1BYTE 、 MLOG_2BYTE 、 MLOG_4BYTE 类型的 redo 日志结构和 MLOG_8BYTE 的类似，只不过具体数据 中包含对应个字节的数据罢了。 MLOG_WRITE_STRING 类型的 redo 日志表示写入一串数据，但是因为不能确定写 入的具体数据占用多少字节，所以需要在日志结构中添加一个 len 字段:</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310110910051.png" alt="image-20220310110910051" style="zoom:25%;" />
+
+<p>redo日志会把事务在执行过程 中对数据库所做的所有修改都记录下来，在之后系统奔溃重启后可以把事务所做的任何修改都恢复出来。</p>
+<h3 id="Mini-Transaction"><a href="#Mini-Transaction" class="headerlink" title="Mini-Transaction"></a>Mini-Transaction</h3><h4 id="以组的形式写入redo日志"><a href="#以组的形式写入redo日志" class="headerlink" title="以组的形式写入redo日志"></a>以组的形式写入<strong>redo</strong>日志</h4><p>语句在执行过程中可能修改若干个页面。比如我们前边说的一条 INSERT 语句可能修改系统表空间页号为 7 的页 面的 Max Row ID 属性(当然也可能更新别的系统页面，只不过我们没有都列举出来而已)，还会更新聚簇索引 和二级索引对应 B+ 树中的页面。由于对这些页面的更改都发生在 Buffer Pool 中，所以在修改完页面之后，需 要记录一下相应的 redo 日志。在执行语句的过程中产生的 redo 日志被设计 InnoDB 的大叔人为的划分成了若干 个不可分割的组，比如:</p>
+<ul>
+<li>更新 Max Row ID 属性时产生的 redo 日志是不可分割的。</li>
+<li>向聚簇索引对应 B+ 树的页面中插入一条记录时产生的 redo 日志是不可分割的。 </li>
+<li>向某个二级索引对应 B+ 树的页面中插入一条记录时产生的 redo 日志是不可分割的。 </li>
+<li>还有其他的一些对页面的访问操作时产生的 redo 日志是不可分割的</li>
+</ul>
+<p>规定在执行这些需要保证原子性的操作时必须以 组 的形式来记录的 redo 日志，在进行系统奔 溃重启恢复时，针对某个组中的 redo 日志，要么把全部的日志都恢复掉，要么一条也不恢复</p>
+<ul>
+<li>有的需要保证原子性的操作会生成多条 redo 日志，比如向某个索引对应的 B+ 树中进行一次悲观插入就需要 生成许多条 redo 日志。</li>
+</ul>
+<p>在该组中 的最后一条 redo 日志后边加上一条特殊类型的 redo 日志，该类型名称为 MLOG_MULTI_REC_END ， type 字 段对应的十进制数字为 31 ，该类型的 redo 日志结构很简单，只有一个 type 字段</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310114517932.png" alt="image-20220310114517932" style="zoom:25%;" />
+
+<p>所以某个需要保证原子性的操作产生的一系列 redo 日志必须要以一个类型为 MLOG_MULTI_REC_END 结尾，就 像这样:</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310114543679.png" alt="image-20220310114543679" style="zoom:25%;" />
+
+<p>这样在系统奔溃重启进行恢复时，只有当解析到类型为 MLOG_MULTI_REC_END 的 redo 日志，才认为解析到了 一组完整的 redo 日志，才会进行恢复。否则的话直接放弃前边解析到的 redo 日志。</p>
+<ul>
+<li>有的需要保证原子性的操作只生成一条 redo 日志，比如更新 Max Row ID 属性的操作就只会生成一条 redo 日志。</li>
+</ul>
+<p>其实在一条日志后边跟一个类型为 MLOG_MULTI_REC_END 的 redo 日志也是可以的，不过设计 InnoDB 的大叔 比较勤俭节约，他们不想浪费一个比特位。别忘了虽然 redo 日志的类型比较多，但撑死了也就是几十种， 是小于 127 这个数字的，也就是说我们用7个比特位就足以包括所有的 redo 日志类型，而 type 字段其实是 占用1个字节的，也就是说我们可以省出来一个比特位用来表示该需要保证原子性的操作只产生单一的一条</p>
+<p>redo 日志，示意图如下</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310114949619.png" alt="image-20220310114949619" style="zoom:25%;" />
+
+<p>如果 type 字段的第一个比特位为 1 ，代表该需要保证原子性的操作只产生了单一的一条 redo 日志，否则 表示该需要保证原子性的操作产生了一系列的 redo 日志</p>
+<h3 id="redo日志的写入过程"><a href="#redo日志的写入过程" class="headerlink" title="redo日志的写入过程"></a><strong>redo</strong>日志的写入过程</h3><p>设计 MySQL 的大叔把对底层页面中的一次原子访问的过程称之为一个 Mini-Transaction ，简称 mtr 。一个所谓的 mtr 可以包含一组 redo 日志，在进 行奔溃恢复时这一组 redo 日志作为一个不可分割的整体。</p>
+<p>一个事务可以包含若干条语句，每一条语句其实是由若干个 mtr 组成，每一个 mtr 又可以包含若干条 redo 日 志，画个图表示它们的关系就是这样</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310115137429.png" alt="image-20220310115137429" style="zoom:23%;" />
+
+
+
+<h4 id="redo-log-block"><a href="#redo-log-block" class="headerlink" title="redo log block"></a>redo log block</h4><p>通过 mtr 生成的 redo 日志都放在了大小为 512字节 的 页 中。为了区分这里把用来存储 redo 日志的页称为 block (你心里清楚页和block的意思其实差不多就行了）</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310115406269.png" alt="image-20220310115406269" style="zoom:25%;" />
+
+<p>真正的 redo 日志都是存储到占用 496 字节大小的 log block body 中，图中的 log block header 和 log block trailer 存储的是一些管理信息</p>
+<img data-src="../images/pic/mysql的redo和undo-log/image-20220310115436620.png" alt="image-20220310115436620" style="zoom:25%;" />
+
+
+
+<ul>
+<li>LOG_BLOCK_HDR_NO :每一个block都有一个大于0的唯一标号，本属性就表示该标号值。</li>
+<li>LOG_BLOCK_HDR_DATA_LEN :表示block中已经使用了多少字节，初始值为 12 (因为 log block body 从第 12个字节处开始)。随着往block中写入的redo日志越来也多，本属性值也跟着增长。如果 log block body 已经被全部写满，那么本属性的值被设置为 512 。</li>
+<li>LOG_BLOCK_FIRST_REC_GROUP :一条 redo 日志也可以称之为一条 redo 日志记录( redo log record )， 一个 mtr 会生产多条 redo 日志记录，这些 redo 日志记录被称之为一个 redo 日志记录组( redo log record group )。 LOG_BLOCK_FIRST_REC_GROUP 就代表该block中第一个 mtr 生成的 redo 日志记录组的偏 移量(其实也就是这个block里第一个 mtr 生成的第一条 redo 日志的偏移量)。</li>
+<li>LOG_BLOCK_CHECKPOINT_NO :表示所谓的 checkpoint 的序号， checkpoint 是我们后续内容的重点，现在 先不用清楚它的意思，稍安勿躁。</li>
+</ul>
+<hr>
+<p>   任何项目都会有日志，<code>MySQL</code>也不例外，而且<code>MySQL</code>更是其中的佼佼者，日志种类繁多，而本篇的目的就是全解<code>MySQL</code>中的各类日志，如撤销日志、错误日志、慢查询日志、中继日志、回滚日志…..</p>
+<p>   其实日志的作用不言而喻，无论是线上排查，亦或是性能优化，几乎都需要从日志中来获得信息作为依据，而<code>MySQL</code>中，很多很多的功能也都需要基于日志实现，比如事务回滚、数据持久化、数据恢复、数据迁移、<code>MVCC</code>机制…..，因此本篇去阐述日志，也是为了方便撰写后续的其他文章。</p>
+<blockquote>
+<p>OK，废话不多说了，咱们现在就开始吧~</p>
+</blockquote>
+<h2 id="一、Undo-log撤销日志"><a href="#一、Undo-log撤销日志" class="headerlink" title="一、Undo-log撤销日志"></a>一、Undo-log撤销日志</h2><p>   <code>Undo</code>即撤销的意思，但咱们通常也习惯称它为回滚日志，在日常开发过程中，如果代码敲错了，一般会习惯性的按下<code>Ctrl+Z</code>撤销，而<code>Undo-log</code>的作用也是如此，但它是用来给<code>MySQL</code>撤销<code>SQL</code>操作的。</p>
+<p>在之前的<a target="_blank" rel="noopener" href="https://juejin.cn/post/7145102393988874253" title="https://juejin.cn/post/7145102393988874253">《SQL执行篇》</a>中曾聊到过，当一条写入类型的<code>SQL</code>执行时，都会记录<code>Undo-log</code>日志，会生成相应的反<code>SQL</code>放入到<code>Undo-log</code>中，例如：</p>
+<ul>
+<li>如果目前是<code>insert</code>插入操作，则生成一个对应的<code>delete</code>操作。</li>
+<li>如果目前是<code>delete</code>删除操作，<code>InnoDB</code>中会修改隐藏字段<code>deleted_bit=1</code>，则生成改为<code>0</code>的语句。</li>
+<li>如果目前的<code>update</code>修改操作，比如将姓名从竹子改成了熊猫，那就生成一个从熊猫改回竹子的操作。</li>
+</ul>
+<p>当事务中某条<code>SQL</code>执行失败时，<code>MySQL</code>就需要回滚事务中其他执行成功的<code>SQL</code>，此时就会找到这个事务在<code>Undo-log</code>中生成的反<code>SQL</code>，然后将库中的数据改回事务发生前的样子。</p>
+<blockquote>
+<p>大家看这段话，似乎没有啥问题对不？也包括我之前的文章中也是这样去描述的，但这里其实存在些许误导，在之前的《SQL执行篇》中，我们说一条写<code>SQL</code>执行前，会生成对应的反<code>SQL</code>记录在<code>Undo-log</code>中，但实际上并不会生成反<code>SQL</code>，这样去叙述仅是为了方便大家理解罢了。</p>
+</blockquote>
+<p>那咱们怎么证明不会生成反<code>SQL</code>呢？如果大家有仔细研究过<code>MySQL</code>的日志，应该会发现<code>Undo-log</code>并不存在单独的日志文件，也就是磁盘中并不会存在<code>xx-undo.log</code>这类的文件，那<code>Undo-log</code>存在哪儿呢？<code>InnoDB</code>默认是将<code>Undo-log</code>存储在<code>xx.ibdata</code>共享表数据文件当中，默认采用段的形式存储。</p>
+<p>也就是当一个事务尝试写某行表数据时，首先会将旧数据拷贝到<code>xx.ibdata</code>文件中，将表中行数据的隐藏字段：<code>roll_ptr</code>回滚指针会指向<code>xx.ibdata</code>文件中的旧数据，然后再写表上的数据。</p>
+<blockquote>
+<p>那<code>Undo-log</code>究竟在<code>xx.ibdata</code>文件中怎么存储呢？在共享表数据文件中，有一块区域名为<code>Rollback Segment</code>回滚段，每个回滚段中有<code>1024</code>个<code>Undo-log Segment</code>，每个<code>Undo</code>段可存储一条旧数据，而执行写<code>SQL</code>时，<code>Undo-log</code>就是写入到这些段中。</p>
+</blockquote>
+<p>不过在<code>MySQL5.5</code>版本前，默认只有一个<code>Rollback Segment</code>，而在<code>MySQL5.5</code>版本后，默认有<code>128</code>个回滚段，即支持<code>128*1024</code>条<code>Undo</code>记录同时存在。</p>
+<h3 id="1-1、对于事务回滚原理的纠正"><a href="#1-1、对于事务回滚原理的纠正" class="headerlink" title="1.1、对于事务回滚原理的纠正"></a>1.1、对于事务回滚原理的纠正</h3><p>结合上述纠正后的内容，咱们再对事务的回滚原理稍作更正，实际上当一个事务需要回滚时，本质上并不会以执行反<code>SQL</code>的模式还原数据，而是直接将<code>roll_ptr</code>回滚指针指向的<code>Undo</code>记录，从<code>xx.ibdata</code>共享表数据文件中拷贝到<code>xx.ibd</code>表数据文件，覆盖掉原本改动过的数据。</p>
+<p>还是上个图简单理解一下吧，如下：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/9a8cda0234c34fdda9eb5576d4b5a528~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="事务回滚原理"><br>一条写<code>SQL</code>执行的流程如上图中的序号所示，当需要回滚事务时，直接用<code>Undo</code>旧记录覆盖表中修改过的新记录即可！</p>
+<blockquote>
+<p>如果是<code>insert</code>操作，由于插入之前这条数据都不存在，那么就不会产生<code>Undo</code>记录，此时回滚时如何删除这条记录呢？因为插入操作不会产生<code>Undo</code>旧记录，因此隐藏字段中的<code>roll_ptr=null</code>，因此直接用<code>null</code>覆盖插入的新记录即可，这样也就实现了删除数据的效果~</p>
+</blockquote>
+<h3 id="1-2、基于Undo版本链实现MVCC"><a href="#1-2、基于Undo版本链实现MVCC" class="headerlink" title="1.2、基于Undo版本链实现MVCC"></a>1.2、基于Undo版本链实现MVCC</h3><p>认真阅读过<a target="_blank" rel="noopener" href="https://juejin.cn/post/7155359629050904584" title="https://juejin.cn/post/7155359629050904584">《MySQL-MVCC机制原理剖析》</a>的小伙伴对于这点并不陌生，<code>Undo-log</code>中记录的旧数据并不仅仅只有一条，一条相同的行数据可能存在多条不同版本的<code>Undo</code>记录，内部会通过<code>roll_ptr</code>回滚指针，组成一个单向链表，而这个链表则被称之为<code>Undo</code>版本链，案例如下：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 事务T1：trx_id=1（两次修改同一条数据）</span></span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_name <span class="operator">=</span> &quot;竹子&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"><span class="keyword">UPDATE</span> `zz_users` <span class="keyword">SET</span> user_sex <span class="operator">=</span> &quot;男&quot; <span class="keyword">WHERE</span> user_id <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p><code>Undo-log</code>中的旧数据版本链示意图大致如下：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/57440100409d482ab5df6ccd8554714d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="Undo版本链"><br>当然，对于如何利用版本链实现<code>MVCC</code>机制，这点就不反复赘述了，没了解过的可以去看关于<code>MVCC</code>原理剖析的那篇文章。</p>
+<h3 id="1-3、Undo-log的内存缓冲区"><a href="#1-3、Undo-log的内存缓冲区" class="headerlink" title="1.3、Undo-log的内存缓冲区"></a>1.3、Undo-log的内存缓冲区</h3><p><code>InnoDB</code>在<code>MySQL</code>启动时，会在内存中构建一个<code>BufferPool</code>，而这个缓冲池主要存放两类东西，一类是数据相关的缓冲，如索引、锁、表数据等，另一类则是各种日志的缓冲，如<code>Undo、Bin、Redo....</code>等日志。</p>
+<p>而当一条写<code>SQL</code>执行时，不会直接去往磁盘中的<code>xx.ibdata</code>文件写数据，而是会写在<code>undo_log_buffer</code>缓冲区中，因为工作线程直接去写磁盘太影响效率了，写进缓冲区后会由后台线程去刷写磁盘。</p>
+<blockquote>
+<p>OK~，那么如果当一个事务提交时，<code>Undo</code>的旧记录会不会立马被删除呢？因为事务都提交了，不需要再回滚改动过的数据，似乎用不上<code>Undo</code>旧记录了，对吗？确实如此，但不会立马删除<code>Undo</code>记录，对于旧记录的删除工作，<code>InnoDB</code>中会有专门的<code>purger</code>线程负责，<code>purger</code>线程内部会维护一个<code>ReadView</code>，它会以此作为判断依据，来决定何时移除<code>Undo</code>记录。</p>
+</blockquote>
+<p>为什么不是事务提交后立马删除<code>Undo</code>记录呢？因为可能会有其他事务在通过快照，读<code>Undo</code>版本链中的旧数据，直接移除可能会导致其他事务读不到数据，因此删除的工作就交给了<code>purger</code>线程。</p>
+<h3 id="1-4、Undo-log相关的参数"><a href="#1-4、Undo-log相关的参数" class="headerlink" title="1.4、Undo-log相关的参数"></a>1.4、Undo-log相关的参数</h3><p>最后再来看看关于<code>Undo-log</code>的一些参数，其实在<code>MySQL5.5</code>之前没有太多参数，如下：</p>
+<ul>
+<li><code>innodb_max_undo_log_size</code>：本地磁盘文件中，<code>Undo-log</code>的最大值，默认<code>1GB</code>。</li>
+<li><code>innodb_rollback_segments</code>：指定回滚段的数量，默认为<code>1</code>个。</li>
+</ul>
+<p>除开上述两个参数外，其他参数基本上是在<code>MySQL5.6</code>才有的，如下：</p>
+<ul>
+<li><code>innodb_undo_directory</code>：指定<code>Undo-log</code>的存放目录，默认放在<code>.ibdata</code>文件中。</li>
+<li><code>innodb_undo_logs</code>：指定回滚段的数量，默认为<code>128</code>个，也就是之前的<code>innodb_rollback_segments</code>。</li>
+<li><code>innodb_undo_tablespaces</code>：指定<code>Undo-log</code>分成几个文件来存储，必须开启<code>innodb_undo_directory</code>参数。</li>
+<li><code>innodb_undo_log_truncate</code>：是否开启<code>Undo-log</code>的在线压缩功能，即日志文件超过大小一半时自动压缩，默认<code>OFF</code>关闭。</li>
+</ul>
+<p>没错，在<code>MySQL5.5</code>版本以后，<code>Undo-log</code>日志支持单独存放，并且多出了几个参数可以调整<code>Undo-log</code>的区域。</p>
+<h2 id="二、Redo-log重做日志"><a href="#二、Redo-log重做日志" class="headerlink" title="二、Redo-log重做日志"></a>二、Redo-log重做日志</h2><p>   详细聊明白了<code>Undo-log</code>后，紧接着再来看看它的同胞兄弟：<code>Redo-log</code>日志，为啥说它两是同胞兄弟呢？因为这两日志都是<code>InnoDB</code>引擎独有的，<code>Undo-log</code>主要用于实现事务回滚和<code>MVCC</code>机制，而<code>Redo-log</code>则用来实现数据的恢复。还记得在<a target="_blank" rel="noopener" href="https://juejin.cn/post/7152765784299667487" title="https://juejin.cn/post/7152765784299667487">《MySQL事务篇》</a>中聊到的数据恢复机制嘛？<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/5b3f8a7df93146eeb575b651be1ad41d~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="事务恢复机制"><br><code>Redo-log</code>日志的作用就在于此，下面详细的聊一下它。</p>
+<h3 id="2-1、为何需要Redo-log日志？"><a href="#2-1、为何需要Redo-log日志？" class="headerlink" title="2.1、为何需要Redo-log日志？"></a>2.1、为何需要Redo-log日志？</h3><p>众所周知的一点：<code>MySQL</code>绝大部分引擎都是是基于磁盘存储数据的，但如若每次读写数据都走磁盘，其效率必然十分低下，因此<code>InnoDB</code>引擎在设计时，当<code>MySQL</code>启动后就会在内存中创建一个<code>BufferPool</code>，运行过程中会将大量操作汇集在内存中进行，比如写入数据时，先写到内存中，然后由后台线程再刷写到磁盘。</p>
+<blockquote>
+<p>虽然使用<code>BufferPool</code>提升了<code>MySQL</code>整体的读写性能，但它是基于内存的，也就意味着随着机器的宕机、重启，其中保存的数据会消失，那当一个事务向内存中写入数据后，<code>MySQL</code>突然宕机了，岂不代表这条未刷写到磁盘的数据会丢失吗？答案是<code>Yes</code>，也正由于该原因，<code>Redo-log</code>应运而生！</p>
+</blockquote>
+<p>因为数据写到内存后有丢失风险，这明显违背了事务<code>ACID</code>原则中的持久性，所以<code>Redo-log</code>的出现就是为了解决该问题，<code>Redo-log</code>是一种预写式日志，即在向内存写入数据前，会先写日志，当后续数据未被刷写到磁盘、<code>MySQL</code>崩溃时，就可以通过日志来恢复数据，确保所有提交的事务都会被持久化。</p>
+<blockquote>
+<p>但是要注意：工作线程执行<code>SQL</code>前，写的<code>Redo-log</code>日志，也是写在了内存中的<code>redo_log_buffer</code>缓冲区。</p>
+</blockquote>
+<p>既然<code>Redo-log</code>日志也是先写内存，那<code>Redo-log</code>有没有丢失的风险呢？这跟<code>Redo-log</code>的刷盘策略有关。</p>
+<h3 id="2-2、Redo-log的刷盘策略"><a href="#2-2、Redo-log的刷盘策略" class="headerlink" title="2.2、Redo-log的刷盘策略"></a>2.2、Redo-log的刷盘策略</h3><p>对于内存中的<code>redo_log_buffer</code>缓冲区，其中写入的数据会何时被刷写到磁盘？对于这点在之前<a target="_blank" rel="noopener" href="https://juejin.cn/post/7145102393988874253#heading-13" title="https://juejin.cn/post/7145102393988874253#heading-13">《SQL执行篇-写SQL执行时的日志操作》</a>中简单的提到过：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/e7a2196602a3405dbdf1ffc563e58036~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="刷盘策略"><br>简单来说就是刷盘的时机由<code>innodb_flush_log_at_trx_commit</code>参数来控制，默认是处于第二个级别，也就是每次提交事务时都会刷盘，这也就意味着一个事务执行成功后，相应的<code>Redo-log</code>日志绝对会被刷写到磁盘中，因此无需担心会出现丢失风险。</p>
+<blockquote>
+<p>那如果事务还未提交时，<code>MySQL</code>宕机怎么办？对于这个问题在事务篇的那个截图中有，不再反复赘述！</p>
+</blockquote>
+<p>但再来思考一个问题：既然<code>Redo-log</code>要写磁盘，那为何不在写日志的时候，直接把数据写到磁盘里面去呢？</p>
+<h3 id="2-3、Redo-log中为何“多此一举”？"><a href="#2-3、Redo-log中为何“多此一举”？" class="headerlink" title="2.3、Redo-log中为何“多此一举”？"></a>2.3、Redo-log中为何“多此一举”？</h3><p>先刷写一次<code>Redo-log</code>日志到磁盘，后台线程再根据<code>Redo-log</code>日志把数据落盘，这个动作似乎看起来有些多余对吧？但实际上这样做好处很大：</p>
+<ul>
+<li>①日志比数据先落入磁盘，因此就算<code>MySQL</code>崩溃也可以通过日志恢复数据。</li>
+<li>②写日志时是以追加形式写到末尾，而写数据时则是计算数据位置，随机插入。</li>
+</ul>
+<p>对于第一点好处就不多说了，重点来聊一聊第二点，因为写日志的时候，只需要将记录追加到日志文件的尾部即可，这是按顺序写入，但写入表数据时，还需要先先计算数据的位置，比如修改一条数据时，需要先判断这条数据在磁盘文件中的那个位置，找到了位置再写入，这是随机写入，顺序写入的速度会比随机写入快很多很多。</p>
+<blockquote>
+<p>因为写日志会比写数据落盘快，因此日志落盘后返回，比数据落盘后返回要快，对于客户端而言，响应时间会更短~</p>
+</blockquote>
+<h3 id="2-4、Redo-log相关的参数"><a href="#2-4、Redo-log相关的参数" class="headerlink" title="2.4、Redo-log相关的参数"></a>2.4、Redo-log相关的参数</h3><p>这里也列举出几个<code>Redo-log</code>日志中，较为重要的系统参数：</p>
+<ul>
+<li><code>innodb_flush_log_at_trx_commit</code>：设置<code>redo_log_buffer</code>的刷盘策略，默认每次提交事务都刷盘。</li>
+<li><code>innodb_log_group_home_dir</code>：指定<code>redo-log</code>日志文件的保存路径，默认为<code>./</code>。</li>
+<li><code>innodb_log_buffer_size</code>：指定<code>redo_log_buffer</code>缓冲区的大小，默认为<code>16MB</code>。</li>
+<li><code>innodb_log_files_in_group</code>：指定<code>redo</code>日志的磁盘文件个数，默认为<code>2</code>个。</li>
+<li><code>innodb_log_file_size</code>：指定<code>redo</code>日志的每个磁盘文件的大小限制，默认为<code>48MB</code>。</li>
+</ul>
+<p>其中主要讲一下<code>Redo-log</code>的本地磁盘文件个数，为啥默认是两个呢？因为<code>MySQL</code>通过来回写这两个文件的形式记录<code>Redo-log</code>日志，用两个日志文件组成一个“环形”，如下：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/445a7cb22b584674a2c8bb06aa1f9b19~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="redo-log本地磁盘文件"><br>先来简单解释一下图中存在的两根指针：</p>
+<ul>
+<li><code>write pos</code>：这根指针用来表示当前<code>Redo-log</code>文件写到了哪个位置。</li>
+<li><code>check point</code>：这根指针表示目前哪些<code>Redo-log</code>记录已经失效且可以被擦除（覆盖）。</li>
+</ul>
+<p>两根指针中间区域，也就是图中的红色区域，代表是可以写入日志记录的可用空间，而蓝色区域则表示日志落盘但数据还未落盘的记录，这句话怎么理解呢？</p>
+<blockquote>
+<p>当一个事务写了<code>redo-log</code>日志、并将数据写入缓冲区后，但数据还未写到本地的表数据文件中，此时这个事务对应的<code>redo-log</code>记录就为上图中的蓝色，而当一个事务所写的数据也落盘后，对应的<code>redo-log</code>记录就会变为红色。</p>
+</blockquote>
+<p>当<code>write pos</code>指针追上<code>check point</code>指针时，红色区域就会消失，也就代表<code>Redo-log</code>文件满了，再当<code>MySQL</code>执行写操作时就会被阻塞，因为无法再写入<code>redo-log</code>日志了，所以会触发<code>checkpoint</code>刷盘机制，将<code>redo-log</code>记录对应的事务数据，全部刷写到磁盘中的表数据文件后，阻塞的写事务才能继续执行。</p>
+<blockquote>
+<p>触发<code>checkpoint</code>刷盘机制后，随着数据的落盘，<code>check point</code>指针也会不断的向后移动，红色区域也会不断增长，因此阻塞的写事务才能继续执行。</p>
+</blockquote>
+<p>OK~，再补齐一些关于<code>checkpoint</code>机制的系统参数：</p>
+<ul>
+<li><code>innodb_log_write_ahead_size</code>：设置<code>checkpoint</code>刷盘机制每次落盘动作的大小，默认为<code>8K</code>，如果你要设置，必须要为<code>4k</code>的整数倍，这跟<code>read-on-write</code>问题有关，具体的可以参考：<a href="https://link.juejin.cn/?target=https://blog.csdn.net/qq_27028561/article/details/116540923" title="https://blog.csdn.net/qq_27028561/article/details/116540923">《这篇文章》</a>。</li>
+<li><code>innodb_log_compressed_pages</code>：是否对<code>Redo</code>日志开启页压缩机制，默认<code>ON</code>，这跟<code>InnoDB</code>的页压缩技术有关，后续《特性篇》聊。</li>
+<li><code>innodb_log_checksums</code>：<code>Redo</code>日志完整性效验机制，默认开启，必须要开启，否则有可能刷写数据时，只刷一半，出现类似于“网络粘包”的问题。</li>
+</ul>
+<p>后续几个参数略微有些复杂，因为主要跟<code>MySQL5.6</code>之后的优化有关，后续在《MySQL特性篇》中会再次细聊。</p>
+<h2 id="三、Bin-log变更日志"><a href="#三、Bin-log变更日志" class="headerlink" title="三、Bin-log变更日志"></a>三、Bin-log变更日志</h2><p>   <code>Bin-log</code>日志也被称之为二进制日志，作用与<code>Redo-log</code>类似，主要是记录所有对数据库表结构变更和表数据修改的操作，对于<code>select、show</code>这类读操作并不会记录。<code>bin-log</code>是<code>MySQL-Server</code>级别的日志，也就是所有引擎都能用的日志，而<code>redo-log、undo-log</code>都是<code>InnoDB</code>引擎专享的，无法跨引擎生效。</p>
+<p><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/18282222d19b4350a48de69efd8aefd7~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="写SQL执行流程"><br>OK~，再看到这张写<code>SQL</code>的执行流程图，重点观察里面的第<code>⑨</code>步，无论当前表使用的是什么引擎，实际上都需要完成记录<code>bin-log</code>日志这步操作，和之前分析的两种日志相同，<code>bin-log</code>也由内存日志缓冲区+本地磁盘文件两部分组成，这也就意味着：写<code>bin-log</code>日志时，也会先写缓冲区，然后由后台线程去刷盘。</p>
+<h3 id="3-1、bin-log的缓冲区"><a href="#3-1、bin-log的缓冲区" class="headerlink" title="3.1、bin-log的缓冲区"></a>3.1、bin-log的缓冲区</h3><p>为啥要单独把<code>bin-log</code>的缓冲区拎出来讲呢？因为它跟<code>redo-log、undo-log</code>的缓冲区并不同，前面分析的两种日志缓冲区，都位于<code>InnoDB</code>创建的共享<code>BufferPool</code>中，而<code>bin_log_buffer</code>是位于每条线程中的，关系图如下：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/d1374310f72243c7bae67dad8dab976a~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="日志缓冲区与本地文件"><br>也就是说，<code>MySQL-Server</code>会给每一条工作线程，都分配一个<code>bin_log_buffer</code>，而并不是放在共享缓冲区中，这是为啥呢？因为<code>MySQL</code>设计时要兼容所有引擎，直接将<code>bin-log</code>的缓冲区，设计在线程的工作内存中，这样就能够让所有引擎通用，并且不同线程&#x2F;事务之间，由于写的都是自己工作内存中的<code>bin-log</code>缓冲，因此并发执行时也不会冲突！</p>
+<blockquote>
+<p><code>bin_log_buffer</code>的设计，就类似于咱们之前讲<a target="_blank" rel="noopener" href="https://juejin.cn/post/7041073881188139039" title="https://juejin.cn/post/7041073881188139039">《并发编程》</a>时讲过的<a target="_blank" rel="noopener" href="https://juejin.cn/post/7038470209262321695" title="https://juejin.cn/post/7038470209262321695">《ThreadLocal线程变量副本》</a>。</p>
+</blockquote>
+<p>OK~，简单理解<code>bin-log</code>缓冲区的设计后，对于<code>bin-log</code>的刷盘策略就不反复赘述了，就是通过<code>sync_binlog</code>参数控制，与之前<code>redo-log</code>类似（上面有）。</p>
+<h3 id="3-2、Bin-log本地日志文件的格式"><a href="#3-2、Bin-log本地日志文件的格式" class="headerlink" title="3.2、Bin-log本地日志文件的格式"></a>3.2、Bin-log本地日志文件的格式</h3><p><code>bin-log</code>的本地日志文件，采用的是追加写的模式，也就是一直向文件末尾写入新的日志记录，当一个日志文件写满后，会创建一个新的<code>bin-log</code>日志文件，每个日志文件的命名为<code>mysql-bin.000001、mysql-bin.000002、mysql-bin.00000x....</code>，可以通过<code>show binary logs;</code>命令查看已有的<code>bin-log</code>日志文件。</p>
+<blockquote>
+<p>接着再来聊聊<code>bin-log</code>文件的内部格式~</p>
+</blockquote>
+<p>在<code>bin-log</code>的本地文件中，其中存储的日志记录共有<code>Statment、Row、Mixed</code>三种格式，分别是啥意思呢？</p>
+<blockquote>
+<p><code>Statment</code>：每一条会对数据库产生变更的<code>SQL</code>语句都会记录到<code>bin-log</code>中。</p>
+</blockquote>
+<p>咋理解这句话呢？举个例子：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 查询一次用户表数据，如下：</span></span><br><span class="line"><span class="keyword">SELECT</span> <span class="operator">*</span> <span class="keyword">FROM</span> `zz_users`;</span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span> user_id <span class="operator">|</span> user_name <span class="operator">|</span> user_sex <span class="operator">|</span> password <span class="operator">|</span> register_time       <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">1</span> <span class="operator">|</span> 熊猫      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">6666</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-08</span><span class="number">-14</span> <span class="number">15</span>:<span class="number">22</span>:<span class="number">01</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">2</span> <span class="operator">|</span> 竹子      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">1234</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-14</span> <span class="number">16</span>:<span class="number">17</span>:<span class="number">44</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">3</span> <span class="operator">|</span> 子竹      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">4321</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-16</span> <span class="number">07</span>:<span class="number">42</span>:<span class="number">21</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">4</span> <span class="operator">|</span> 猫熊      <span class="operator">|</span> 女       <span class="operator">|</span> <span class="number">8888</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-27</span> <span class="number">17</span>:<span class="number">22</span>:<span class="number">59</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">|</span>       <span class="number">9</span> <span class="operator">|</span> 黑竹      <span class="operator">|</span> 男       <span class="operator">|</span> <span class="number">9999</span>     <span class="operator">|</span> <span class="number">2022</span><span class="number">-09</span><span class="number">-28</span> <span class="number">22</span>:<span class="number">31</span>:<span class="number">44</span> <span class="operator">|</span></span><br><span class="line"><span class="operator">+</span><span class="comment">---------+-----------+----------+----------+---------------------+</span></span><br><span class="line"></span><br><span class="line"><span class="comment">-- 将用户表中所有 ID&gt;3的密码重置</span></span><br><span class="line"><span class="keyword">update</span> `zz_users` <span class="keyword">set</span> `password` <span class="operator">=</span> &quot;1111&quot; <span class="keyword">where</span> user_id <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>比如上述这个事务执行时，<code>MySQL</code>会将第二条<code>update</code>语句记录在<code>bin-log</code>日志中，但对于<code>select</code>语句则不会记录（在记录<code>SQL</code>时，还会记录一下<code>SQL</code>的上下文信息，如执行时间、事务ID、日志量……）。</p>
+<p>这种方式的优势很明显，由于只记录对数据库产生变更操作的<code>SQL</code>，所以不会产生太大的日志量，节约空间，恢复数据时因为数据量小，所以磁盘<code>IO</code>次数少，因此性能会比较不错。同时做主备等高可用架构时，数据同步也会较小，因此比较节省带宽。</p>
+<blockquote>
+<p>但虽然优势不小，但缺点页很明显，即恢复数据、主从同步数据时，有时会出现数据不一致的情况，如<code>SQL</code>中使用了<code>sysdate()、now()</code>这类函数，比如举个简单的例子：</p>
+</blockquote>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> `zz_users` <span class="keyword">values</span>(<span class="number">11</span>,&quot;棕熊&quot;,&quot;男&quot;,&quot;3333&quot;,sysdate());</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>比如这条插入语句，由于对用户表产生了变更操作，所以会被记录到<code>bin-log</code>中，但当主从架构之间做数据同步时，假设将这条<code>SQL</code>同步到从机上执行，此时问题就来了，<code>sysdate()</code>函数会获取机器的当前时间，但主机和从机执行这条<code>SQL</code>显然不是同一时间，因此就会导致<code>ID=11</code>的这条数据，在主机和从机的用户表中，注册时间会出现不一致。</p>
+<blockquote>
+<p><code>Row</code>：这种模式就是为了解决<code>Statment</code>模式的缺陷，<code>Row</code>模式中不再记录每条造成变更的<code>SQL</code>语句，而是记录具体哪一个分区中的、哪一个页中的、哪一行数据被修改了。</p>
+</blockquote>
+<p>这又怎么理解呢？还是以前面的重置密码的例子来说：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">-- 将用户表中所有 ID&gt;3的密码重置（ID=4、9的两条数据会被重置）</span></span><br><span class="line"><span class="keyword">update</span> `zz_users` <span class="keyword">set</span> `password` <span class="operator">=</span> &quot;1111&quot; <span class="keyword">where</span> user_id <span class="operator">&gt;</span> <span class="number">3</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>在这种模式下，就不会记录这条<code>update</code>语句，而是记录发生改变的行数据，即<code>ID=4、9</code>的两条用户数据，会将其更改后的值记录到<code>bin-log</code>日志中。</p>
+<p>这种方式因为不记录<code>SQL</code>，而是记录修改后的值，因此有个很大的好处是：当主从同步数据时，复制的是主机上的数据，因此不会出现主从数据不一致的情况。但缺陷同样很明显，比如表中有<code>800W</code>数据，现在我对<code>ID&lt;600W</code>的所有数据进行了修改操作，哪也就意味着会有<code>600W</code>条记录写入<code>bin-log</code>日志，这个数据量可想而知，其磁盘<code>IO</code>、网络带宽开销会很高。</p>
+<blockquote>
+<p><code>Mixed</code>：这种被称为混合模式，即<code>Statment、Row</code>的结合版，因为<code>Statment</code>模式会导致数据出现不一致，而<code>Row</code>模式数据量又会很大，因此<code>Mixed</code>模式结合了两者的优劣势，对于可以复制的<code>SQL</code>采用<code>Statment</code>模式记录，对于无法复制的<code>SQL</code>采用<code>Row</code>记录。</p>
+</blockquote>
+<p>这样即保留了<code>Statment</code>模式的数据量小，又具备<code>Row</code>模式的数据精准性，鱼和熊掌兼得焉~</p>
+<blockquote>
+<p>其实看到这里，如果比较熟悉<code>Redis4.x</code>版本的小伙伴应该会有种熟悉感，<code>Redis</code>的<code>RDB、AOF</code>持久化模式，正好对应<code>MySQL</code>的<code>Statment、Row</code>模式，而<code>Redis4.0</code>引入了混合持久化机制，<code>MySQL5.1</code>版本也引入了混合日志模式~</p>
+</blockquote>
+<h3 id="3-2、为什么有了Redo-log还需要Bin-log？"><a href="#3-2、为什么有了Redo-log还需要Bin-log？" class="headerlink" title="3.2、为什么有了Redo-log还需要Bin-log？"></a>3.2、为什么有了Redo-log还需要Bin-log？</h3><p><code>Redo-log、Bin-log</code>都是记录更新数据库的操作，但为什么会同时设计两个呢？这其实跟<code>InnoDB</code>有关，如若对<code>MySQL</code>旧史较为熟悉的小伙伴应该知道，<code>MySQL</code>自己的官方引擎实际上最初是<code>MyISAM</code>，<code>InnoDB</code>是<code>Innobase-Oy</code>公司开发的一款可拔插式引擎，由于<code>InnoDB</code>被<code>MySQL</code>支持后使用频率越来越高，后面<code>MySQL</code>官方才用<code>InnoDB</code>替换了<code>MyISAM</code>作为默认引擎。</p>
+<blockquote>
+<p>那这跟上面的问题有啥关系呢？其实关系很大，<code>MySQL-Server、MyISAM</code>是出自于官方的产品，因此<code>MyISAM</code>中并未设计记录变更操作的日志，记录变更操作由<code>MySQL-Server</code>来通过<code>Bin-log</code>完成。</p>
+</blockquote>
+<p>但因为<code>MyISAM</code>不支持事务，所以<code>MySQL-Server</code>设计的<code>Bin-log</code>无法用于灾难恢复，因此<code>InnoDB</code>在设计时，又重新设计出<code>Redo-log</code>日志，可以利用该日志实现<code>crash-safe</code>灾难恢复能力，确保任何事务提交后数据都不会丢失。</p>
+<h3 id="3-3、Redo-log、Bin-log两者的区别"><a href="#3-3、Redo-log、Bin-log两者的区别" class="headerlink" title="3.3、Redo-log、Bin-log两者的区别"></a>3.3、Redo-log、Bin-log两者的区别</h3><p>对于<code>Redo-log、Bin-log</code>两者的区别，主要可以从四个维度上来说：</p>
+<ul>
+<li>①生效范围不同，<code>Redo-log</code>是<code>InnoDB</code>专享的，<code>Bin-log</code>是所有引擎通用的。</li>
+<li>②写入方式不同，<code>Redo-log</code>是用两个文件循环写，而<code>Bin-log</code>是不断创建新文件追加写。</li>
+<li>③文件格式不同，<code>Redo-log</code>中记录的都是变更后的数据，而<code>Bin-log</code>会记录变更<code>SQL</code>语句。</li>
+<li>④使用场景不同，<code>Redo-log</code>主要实现故障情况下的数据恢复，<code>Bin-log</code>则用于数据灾备、同步。</li>
+</ul>
+<h3 id="3-4、不小心删库后应该跑路吗？"><a href="#3-4、不小心删库后应该跑路吗？" class="headerlink" title="3.4、不小心删库后应该跑路吗？"></a>3.4、不小心删库后应该跑路吗？</h3><p>首先来说一下，为啥要讨论这个问题呢，这是由于之前<a target="_blank" rel="noopener" href="https://juejin.cn/post/7143614079532269598" title="https://juejin.cn/post/7143614079532269598">《MySQL架构篇》</a>的评论区的一位小伙伴提出的：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/8e8f914ca4cc4ec89ebf7ef1a6c49a80~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="删库跑路"><br>这里有两个问题：①删库后跑路会不会被人发现？②<code>MySQL</code>能不能和<code>Oracle</code>一样具备闪回功能？</p>
+<blockquote>
+<p>先来简单聊聊第一个问题，如果你在线上真的删库了，哪就先别想着跑路，你跑不掉！因为<code>bin-log</code>日志中会记录执行<code>SQL</code>的连接会话信息，同时一般规模较大的企业，都会搭建完善的监控系统，会监控服务的网络连接，因此当你删库后，可以顺着<code>bin-log → session → network-connection</code>这条线确定执行删库<code>SQL</code>的<code>IP</code>！如果你还未断开连接，直接通过<code>MySQL</code>的命令就能定位到删库的<code>IP</code>，因此基本上删库了，是可以定位到责任人的！</p>
+</blockquote>
+<p>当然，如果项目配备的监控系统不够完善，同时你的连接已经断开，并且电脑换了一个局域网，同时时间来到了三天以后，如果还没人发现你，哪基本上跑路也不会有人发现，但这样干，会存在些许做贼心虚的嫌疑~</p>
+<blockquote>
+<p>OK~，不过多的讨论这个话题了，总之你跑路肯定不能跑，误删了数据就要想办法恢复，咋恢复呢？通过日志恢复，但<code>Redo-log、Bin-log</code>都会记录数据库的变更操作，因此用谁比较合适呢？</p>
+</blockquote>
+<p>答案是<code>Bin-log</code>，因为<code>Redo-log</code>采用循环写的方式，一边写会一边擦，里面无法得到完整的数据，而<code>Bin-log</code>是追加写的模式，你不去主动删除磁盘的日志文件，并且磁盘的空间还足够，一般<code>Bin-log</code>日志文件都会在本地，因此当你删库后，可以直接去本地找<code>Bin-log</code>的日志文件，然后拷贝出来一份，再打开最后一个文件，把里面删库的记录手动移除，再利用<code>mysqlbinlog</code>工具导出<code>xx.SQL</code>文件，最后执行该<code>SQL</code>文件即可恢复删库前的数据。</p>
+<blockquote>
+<p>这里就叙说大体逻辑，具体的数据恢复操作，会在后续的《MySQL线上排查与数据恢复篇》细讲，其实也可以通过<code>Flashback</code>工具提供的闪回功能恢复数据，但以后再细聊~</p>
+</blockquote>
+<h3 id="3-5、bin-log相关的参数"><a href="#3-5、bin-log相关的参数" class="headerlink" title="3.5、bin-log相关的参数"></a>3.5、bin-log相关的参数</h3><ul>
+<li><code>log_bin</code>：是否开启<code>bin-log</code>日志，默认<code>ON</code>开启，表示会记录变更<code>DB</code>的操作。</li>
+<li><code>log_bin_basename</code>：设置<code>bin-log</code>日志的存储目录和文件名前缀，默认为<code>./bin.0000x</code>。</li>
+<li><code>log_bin_index</code>：设置<code>bin-log</code>索引文件的存储位置，因为本地有多个日志文件，需要用索引来确定目前该操作的日志文件。</li>
+<li><code>binlog_format</code>：指定<code>bin-log</code>日志记录的存储方式，可选<code>Statment、Row、Mixed</code>。</li>
+<li><code>max_binlog_size</code>：设置<code>bin-log</code>本地单个文件的最大限制，最多只能调整到<code>1GB</code>。</li>
+<li><code>binlog_cache_size</code>：设置为每条线程的工作内存，分配多大的<code>bin-log</code>缓冲区。</li>
+<li><code>sync_binlog</code>：控制<code>bin-log</code>日志的刷盘频率。</li>
+<li><code>binlog_do_db</code>：设置后，只会收集指定库的<code>bin-log</code>日志，默认所有库都会记录。</li>
+<li><code>......</code>：省略其他不常用参数。</li>
+</ul>
+<h3 id="3-6、Redo-log的两阶段提交"><a href="#3-6、Redo-log的两阶段提交" class="headerlink" title="3.6、Redo-log的两阶段提交"></a>3.6、Redo-log的两阶段提交</h3><p>详细大家应该听说过<code>MySQL</code>事务两阶段提交方案，啥叫做事务两阶段提交呢？实则是指<code>Redo-log</code>分两次写入，如下：<br><img data-src="/../images/pic/mysql%E7%9A%84redo%E5%92%8Cundo-log/c02ced87e3ab4699a7349d54b54c3103~tplv-k3u1fbpfcp-zoom-in-crop-mark:4536:0:0:0.awebp" alt="两阶段提交"><br>注意看之前给出的写<code>SQL</code>执行流程图，其中第⑤、⑩步，分别会写两次<code>Redo-log</code>日志，这个日志的作用前面讲的很明白了，主要用来做崩溃恢复，但为什么要分两次写呢？写一次不行嘛？</p>
+<blockquote>
+<p>其实想要弄明白这个问题，要结合<code>bin-log</code>日志一起来聊。</p>
+</blockquote>
+<p>如果只写一次的话，那到底先写<code>bin-log</code>还是<code>redo-log</code>呢？</p>
+<blockquote>
+<p>先写<code>bin-log</code>，再写<code>redo-log</code>：当事务提交后，先写<code>bin-log</code>成功，结果在写<code>redo-log</code>时断电宕机了，再重启后由于<code>redo-log</code>中没有该事务的日志记录，因此不会恢复该事务提交的数据。但要注意，主从架构中同步数据是使用<code>bin-log</code>来实现的，而宕机前<code>bin-log</code>写入成功了，就代表这个事务提交的数据会被同步到从机，也就意味着从机会比主机多出一条数据。</p>
+</blockquote>
+<blockquote>
+<p>先写<code>redo-log</code>，再写<code>bin-log</code>：当事务提交后，先写<code>redo-log</code>成功，但在写<code>bin-log</code>时宕机了，主节点重启后，会根据<code>redo-log</code>恢复数据，但从机依旧是依赖<code>bin-log</code>来同步数据的，因此从机无法将这个事务提交的数据同步过去，毕竟<code>bin-log</code>中没有撒，最终从机会比主机少一条数据。</p>
+</blockquote>
+<p>经过上述分析后可得知：如果<code>redo-log</code>只写一次，那不管谁先写，都有可能造成主从同步数据时的不一致问题出现，为了解决该问题，<code>redo-log</code>就被设计成了两阶段提交模式，设置成两阶段提交后，整个执行过程有三处崩溃点：</p>
+<ul>
+<li><code>redo-log(prepare)</code>：在写入准备状态的<code>redo</code>记录时宕机，事务还未提交，不会影响一致性。</li>
+<li><code>bin-log</code>：在写<code>bin</code>记录时崩溃，重启后会根据<code>redo</code>记录中的事务<code>ID</code>，回滚前面已写入的数据。</li>
+<li><code>redo-log(commit)</code>：在<code>bin-log</code>写入成功后，写<code>redo(commit)</code>记录时崩溃，因为<code>bin-log</code>中已经写入成功了，所以从机也可以同步数据，因此重启时直接再次提交事务，写入一条<code>redo(commit)</code>记录即可。</li>
+</ul>
+<p>通过这种两阶段提交的方案，就能够确保<code>redo-log、bin-log</code>两者的日志数据是相同的，<code>bin-log</code>中有的主机再恢复，如果<code>bin-log</code>没有则直接回滚主机上写入的数据，确保整个数据库系统的数据一致性。</p>
+<blockquote>
+<p>OK~,最后再简单补充一点：为什么<code>bin-log</code>又被叫做二进制日志呢？因为记录日志时，<code>MySQL</code>写入的是二进制数据，而并非字符数据，也就意味着直接用<code>cat/vim</code>这类工具是无法打开的，必须要通过<code>MySQL</code>提供的<code>mysqlbinlog</code>工具解析查看。</p>
+</blockquote>
+<h2 id="四、Error-log错误日志"><a href="#四、Error-log错误日志" class="headerlink" title="四、Error-log错误日志"></a>四、Error-log错误日志</h2><p>   前面已经将最重要的<code>undo-log、redo-log、bin-log</code>三大日志讲明白了，这三个日志都是用来辅助<code>MySQL、InnoDB</code>在线上正常运行的，但凡其中一个出现问题，都有可能导致<code>MySQL</code>无法正常工作。</p>
+<blockquote>
+<p>接下来再看几个辅助性的日志，即<code>error-log、slow-log、relay-log</code>。</p>
+</blockquote>
+<ul>
+<li><code>error-log</code>：<code>MySQL</code>线上<code>MySQL</code>由于非外在因素（断电、硬件损坏…）导致崩溃时，辅助线上排错的日志。</li>
+<li><code>slow-log</code>：系统响应缓慢时，用于定位问题<code>SQL</code>的日志，其中记录了查询时间较长的<code>SQL</code>。</li>
+<li><code>relay-log</code>：搭建<code>MySQL</code>高可用热备架构时，用于同步数据的辅助日志。</li>
+</ul>
+<p>接下来先看<code>error-log</code>，这个日志的作用很明显，从名字都能得知它是用于记录<code>MySQL</code>报错信息的，其中涵盖了<code>MySQL-Server</code>的启动、停止运行的时间，以及报错的诊断信息，也包括了错误、警告和提示等多个级别的日志详情。</p>
+<blockquote>
+<p>通过错误日志，一方面可以用来监控<code>MySQL</code>的运行状态，便于预防故障、发现故障，同时也可以在出现问题时，用来辅助排查问题、修复故障，因为<code>MySQL-Server</code>的错误日志是默认开启的，并且无法手动关闭！</p>
+</blockquote>
+<p>一般来说，<code>error-log</code>日志文件默认是在<code>MySQL</code>安装目录下的<code>data</code>文件夹中，但如果你想要改变位置，哪也可以通过<code>log-error</code>这个参数，来手动指定保存的位置与文件名。</p>
+<blockquote>
+<p>如果你不清楚错误日志的位置，也可以通过<code>SHOW VARIABLES LIKE &#39;log_error&#39;;</code>命令来查看。</p>
+</blockquote>
+<p>最后稍微提一嘴，如何根据错误日志来排错问题呢？实际上非常简单，在<code>MySQL</code>故障的情况下，打开<code>error-log</code>文件，然后搜索<code>Error、Waiting</code>级别的日志记录，然后参考诊断信息即可。</p>
+<h2 id="五、Slow-log慢查询日志"><a href="#五、Slow-log慢查询日志" class="headerlink" title="五、Slow-log慢查询日志"></a>五、Slow-log慢查询日志</h2><p>   对于线上响应缓慢的问题，一步步的排查过程之后还未找到问题，最终就会来到数据库，尝试对<code>SQL</code>或索引调优，但一个项目中，存在成千上万条<code>SQL</code>，到底是由于哪条<code>SQL</code>造成的响应缓慢，如果一条条去分析，其工作量定然非常吃力，为了排查问题时足够轻松，<code>MySQL</code>官方支持开启慢查询日志。</p>
+<p>慢查询日志是什么呢？也就是当一条<code>SQL</code>执行的时间超过规定的阈值后，那么这些耗时的<code>SQL</code>就会被记录在慢查询日志中，当线下出现响应缓慢的问题时，可以直接通过查看慢查询日志定位问题，定位到产生问题的<code>SQL</code>后，再用<code>explain</code>这类工具去生成<code>SQL</code>的执行计划，然后根据生成的执行计划来判断为什么耗时长，是由于没走索引，还是索引失效等情况导致的。</p>
+<blockquote>
+<p>不过对于慢查询<code>SQL</code>的监控，<code>MySQL</code>默认是关闭的，也就是说<code>MySQL</code>默认不会记录慢查询日志，因为为了后续线上问题好排查，项目上线前一定要记得开启！</p>
+</blockquote>
+<ul>
+<li><code>slow_query_log</code>：设置是否开启慢查询日志，默认<code>OFF</code>关闭。</li>
+<li><code>slow_query_log_file</code>：指定慢查询日志的存储目录及文件名。</li>
+</ul>
+<p>可以通过这两个参数来开启慢查询日志，如果不设置存储目录，默认放在<code>MySQL</code>的具体库的目录下。当开启慢查询日志的监控后，可以通过设置<code>long_query_time</code>参数，来指定查询<code>SQL</code>的阈值：</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">set</span> <span class="keyword">global</span> long_query_time <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line">复制代码</span><br></pre></td></tr></table></figure>
+
+<p>其默认单位是秒，因此如果要指定更细粒度的时间，可以通过<code>0.01</code>这种形式设置，<code>0.01</code>表示<code>10ms</code>。当然，该参数也可不设置，不指定阈值的情况下，默认为<code>10s</code>，即执行时间超过<code>10s</code>的查询<code>SQL</code>才会记录到慢查询日志中。</p>
+<blockquote>
+<p>对于阈值的设置，并不是随咱们率性而为，这个参数一定要设置合理！因为该参数的大小会直接影响<code>MySQL</code>的性能，比如设置一个<code>0.2s</code>，但如果大量业务<code>SQL</code>执行时都会超出该时长，那最终会导致<code>MySQL</code>十分频繁的往慢查询日志中写数据。</p>
+</blockquote>
+<p>要记住：慢查询日志在内存中是没有缓冲区的，也就意味着每次记录慢查询<code>SQL</code>，都必须触发磁盘<code>IO</code>来完成，因此阈值设的太小，容易使得<code>MySQL</code>性能下降；如果设的太大，又会导致无法检测到问题<code>SQL</code>，因此该值一定要设置一个合理值。</p>
+<blockquote>
+<p>问题来了，这个值设成多大合理呢？可以先开启<code>general log</code>，观察后实际的业务情况后再决定。</p>
+</blockquote>
+<h3 id="General-log查询日志"><a href="#General-log查询日志" class="headerlink" title="General-log查询日志"></a>General-log查询日志</h3><p><code>general log</code>即查询日志，<code>MySQL</code>会向其中写入所有收到的查询命令，如<code>select、show</code>等，同时要注意：无论<code>SQL</code>的语法正确还是错误、也无论<code>SQL</code>执行成功还是失败，<code>MySQL</code>都会将其记录下来。对于该日志可以通过下述参数开启：</p>
+<ul>
+<li><code>general_log</code>：是否开启查询日志，默认<code>OFF</code>关闭。</li>
+<li><code>general_log_file</code>：指定查询日志的存储路径和文件名（默认在库的目录下，主机名+<code>.log</code>）。</li>
+</ul>
+<p>项目测试阶段，可以先开启查询日志，然后压测所有业务，紧接着再分析日志中<code>SQL</code>的平均耗时，再根据正常的<code>SQL</code>执行时间，设置一个偏大的慢查询阈值即可（这是个笨办法，如果项目规模较大，直接设置一个大概值，然后上灰度发布，走正式的运营场景效果会更佳）。</p>
+<blockquote>
+<p>当然，压测阶段结束后，项目正式上线前，一定要记得关闭普通查询日志！！</p>
+</blockquote>
+<h2 id="六、Relay-log中继日志"><a href="#六、Relay-log中继日志" class="headerlink" title="六、Relay-log中继日志"></a>六、Relay-log中继日志</h2><p>   <code>relay log</code>在单库中是见不到的，该类型的日志仅存在主从架构中的从机上，主从架构中的从机，其数据基本上都是复制主机<code>bin-log</code>日志同步过来的，而从主机复制过来的<code>bin-log</code>数据放在哪儿呢？也就是放在<code>relay-log</code>日志中，中继日志的作用就跟它的名字一样，仅仅只是作为主从同步数据的“中转站”。</p>
+<p>当主机的增量数据被复制到中继日志后，从机的线程会不断从<code>relay-log</code>日志中读取数据并更新自身的数据，<code>relay-log</code>的结构和<code>bin-log</code>一模一样，同样存在一个<code>xx-relaybin.index</code>索引文件，以及多个<code>xx-relaybin.00001、xx-relaybin.00002....</code>数据文件。</p>
+<blockquote>
+<p>对于这个日志的具体参数、工作过程，放在后续的《MySQL高可用-主从读写分离篇》阐述。</p>
+</blockquote>
+<h2 id="七、日志篇总结"><a href="#七、日志篇总结" class="headerlink" title="七、日志篇总结"></a>七、日志篇总结</h2><p>   叨叨絮絮下来，就大致将<code>MySQL</code>中的一些常见、较为重要的日志讲明白啦，其实重点搞清楚<code>undo-log、redo-log、bin-log</code>即可，其他的会在后续篇章中再次提到，最后稍微总结一下这三个比较核心的日志：</p>
+<ul>
+<li><code>undo-log</code>：主要用于实现事务<code>ACID</code>原则中的原子性和<code>MVCC</code>机制。</li>
+<li><code>redo-log</code>：主要用于实现事务原则中的持久性，确保事务提交后就不会丢失。</li>
+<li><code>bin-log</code>：主要结合<code>redo-log</code>实现事务原则中的一致性，确保事务提交前后，数据的一致。</li>
+</ul>
+<p>对于其他几类日志，在本篇中也仅讲明了大概，毕竟后面的章节中会再出现，而对于上述三大日志也就基本上不会提到了，因此剖析的较为全面，那么咱们下篇见~，下面准备讲：《<code>MySQL</code>内存篇》，其实也主要是讲<code>InnoDB Buffer Pool</code>缓冲区，至于为什么半道出家的<code>InnoDB</code>能替换掉官方的<code>MyIASM</code>引擎，最大原因也在于此。</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer"><div>
+    
+        <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-paw"></i> 感谢您的阅读-------------</div>
+    
+</div>
+
+
+
+  <div>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3331353808689126"
+         crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-3331353808689126"
+         data-ad-slot="4663393885"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+  </div>
+
+          <div class="reward-container">
+  <div>坚持技术分享，您的支持将鼓励我继续创作！</div>
+  <button>
+    赞赏
+  </button>
+  <div class="post-reward">
+      <div>
+        <img src="/images/wechatpay.png" alt="Big Jelly 微信">
+        <span>微信</span>
+      </div>
+      <div>
+        <img src="/images/alipay.png" alt="Big Jelly 支付宝">
+        <span>支付宝</span>
+      </div>
+
+  </div>
+</div>
+
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Big Jelly
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html" title="mysql的redo和undo-log">https://tf2jaguar.dpdns.org/mysql-redo-undo-log.html</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/mysql/" rel="tag"><i class="fa fa-tag"></i> mysql</a>
+              <a href="/tags/%E6%97%A5%E5%BF%97/" rel="tag"><i class="fa fa-tag"></i> 日志</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/mysql-how-it-works.html" rel="prev" title="mysql是怎么运行的-笔记">
+                  <i class="fa fa-chevron-left"></i> mysql是怎么运行的-笔记
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/mysql-ensure-not-lost-data.html" rel="next" title="mysql如何保证数据不丢的">
+                  mysql如何保证数据不丢的 <i class="fa fa-chevron-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+    <div class="comments"><div id="twikoo-comments"></div></div>
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+
+<div class="copyright">
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2025</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Big Jelly</span>
+</div>
+<div class="wordcount">
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-line"></i>
+    </span>
+      <span>站点总字数：</span>
+    <span title="站点总字数">1.3m</span>
+  </span>
+  <span class="post-meta-item">
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+      <span>站点阅读时长 &asymp;</span>
+    <span title="站点阅读时长">20:20</span>
+  </span>
+</div>
+<div class="busuanzi-count">
+    <span class="post-meta-item" id="busuanzi_container_site_uv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+    </div>
+  </footer>
+
+  
+  <script src="https://cdn.jsdelivr.net/npm/animejs@3.2.1/lib/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lozad@1.16.0/dist/lozad.min.js" integrity="sha256-mOFREFhqmHeQbXpK2lp4nA3qooVgACfh88fpJftLBbc=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/next-boot.js"></script>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/hexo-generator-searchdb@1.4.0/dist/search.js" integrity="sha256-vXZMYLEqsROAXkEw93GGIvaB2ab+QW6w3+1ahD9nXXA=" crossorigin="anonymous"></script>
+<script src="/js/third-party/search/local-search.js"></script>
+
+
+
+
+
+  
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+
+  <script class="next-config" data-name="leancloud_visitors" type="application/json">{"enable":true,"app_id":"LL6fNXDAATyVuMOPebrbyvug-gzGzoHsz","app_key":"T8iNoMOerwbNmWjJYPeRHAdT","server_url":"https://ll6fnxda.lc-cn-n1-shared.com","security":false}</script>
+  <script src="/js/third-party/statistics/lean-analytics.js"></script>
+
+
+<script class="next-config" data-name="twikoo" type="application/json">{"enable":true,"visitor":false,"envId":"https://graceful-elf-ff86e4.netlify.app/.netlify/functions/twikoo","el":"#twikoo-comments"}</script>
+<script>
+document.addEventListener('page:loaded', () => {
+  NexT.utils.loadComments(CONFIG.twikoo.el)
+    .then(() => NexT.utils.getScript(
+      CONFIG.twikoo.jsUrl || 'https://cdn.jsdelivr.net/npm/twikoo/dist/twikoo.all.min.js',
+      { condition: window.twikoo }
+    ))
+    .then(() => {
+      twikoo.init(CONFIG.twikoo);
+    });
+});
+</script>
+<style>
+.post-block, .comments {
+  overflow: visible;
+}
+.tk-owo-emotion {
+  display: inline-block;
+}
+</style>
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/live2d-widget@^3.1.3/lib/L2Dwidget.min.js"></script><script>L2Dwidget.init({"log":false,"model":{"scale":1,"jsonPath":"/live2dw/assets/miku.model.json"},"display":{"position":"right","width":200,"height":400,"hOffset":0,"vOffset":-5},"mobile":{"show":true,"scale":0.5},"react":{"opacity":0.9},"pluginJsPath":"lib/","pluginModelPath":"assets/","pluginRootPath":"live2dw/","tagMode":false});</script></body>
+</html>
